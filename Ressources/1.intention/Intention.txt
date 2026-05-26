@@ -1,16 +1,14 @@
 But pour l'owner :
-Je suis un etudiant qui fait son premier cours sur les big data. 
-Le but est de faire une pipeline etl sur un jeux de donner choisi et de pouvoir en tirer un question predictive. 
-Ensuite de faire un front et un back simple a l'aide de l'ia pour pouvoir afficher/requette les donner reponse affecter par le model. 
-C'est aussi la premier fois que j'ai un intevenat pour me guider sur l'utilisation de l'ia. La creation en un repo centralla la découpe ressource codebase, les skill , intenetion , plan , spec , ensuite coder etc. 
-LE bu est aussi principalement de savoir comment comment organiser un project et pouvoir ensuite coder dessus que plus produire du code. TU devras aller chercher les bonne practice 
+Je suis un étudiant qui fait son premier cours sur les big data.
+Le but est de faire une pipeline et d'aller sur un jeu de données choisi et de pouvoir en tirer une question prédictive.
+Ensuite, de faire un front et un back simple à l'aide de l'IA pour pouvoir afficher/requêter les données de réponse affectées par le modèle.
+C'est aussi la première fois que j'ai un intervenant pour me guider sur l'utilisation de l'IA. La création en un repo central, la découpe ressource codebase, les sill, intention, plan, spec, ensuite coder etc.
+LE but est aussi principalement de savoir comment organiser un projet et pouvoir ensuite coder dessus que plus produire du code. TU devras aller chercher les bonnes pratiques
 
-Futur : Pour plus tard il faudrais recuperer le bianaire du model puis tout déployer sur azure 
+Futur : Pour plus tard, il faudrait récupérer le binaire du modèle puis tout déployer sur Azure
 
-
-But pour l'ia: 
-Rechecher les bonne practice 
-Faire un plan 
-échanger en q&a 
-crée le spec 
-
+But pour l'IA:
+Rechercher les bonnes pratiques
+Faire un plan
+échanger en quoi
+crée le spec
