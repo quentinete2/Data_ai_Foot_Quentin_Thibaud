@@ -11,6 +11,14 @@ Format par entrée :
 
 <!-- Les agents ajoutent leurs entrées ici, la plus récente en haut -->
 
+## [D1] 2026-05-26 — Déploiement Docker (backend + frontend + compose)
+- `CodeBase/backend/Dockerfile` : image python:3.11-slim, installe requirements, expose 8000
+- `CodeBase/backend/.dockerignore` : exclut __pycache__, .venv, node_modules
+- `CodeBase/frontend/Dockerfile` : build multi-stage node:20-alpine → nginx:alpine, expose 80
+- `CodeBase/frontend/.dockerignore` : exclut node_modules, dist
+- `CodeBase/docker-compose.yml` : service backend (8000) + frontend (80) avec depends_on
+- CORS `http://localhost` déjà présent dans main.py (D1-d)
+
 ## [F1-F4] 2026-05-26 — Implémentation complète du frontend
 - `CodeBase/frontend/src/api.ts` : types TS alignés sur le backend (MatchInput, PredictResponse, TeamStats, StatItem, StatsResponse) + signatures predire/getStats mises à jour
 - `CodeBase/frontend/src/PredictionForm.tsx` : formulaire 2 champs texte (home_team/away_team), affichage résultat (prediction + confidence + 3 probabilités en grille)
