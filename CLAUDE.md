@@ -45,20 +45,21 @@ Pré-requis : `model.pkl` présent dans `backend/`. Voir `Ressources/3.plan/08_d
 
 `CodeBase/etl/Data_ia_foot.ipynb` trains the model end-to-end:
 - **Data**: loads `matches.csv` + `tournaments.csv` from GitHub (mirrors `Ressources/Data/`)
-- **Target** `stade_atteint`: stage reached, 1 (group) → 6 (winner)
-- **Features** (per team, per tournament): `nb_participations`, `taux_victoire_historique`, `buts_marques_moy`, `buts_encaisses_moy`, `diff_buts_moy`, `meilleur_stade_atteint`, `stade_dernier_tournoi`, `est_hote`
-- **Temporal split**: train 1930–2018, test 2022 Qatar; 2026 predictions include host flag for USA/Canada/Mexico
-- **Models**: Random Forest Regressor + Gradient Boosting Regressor, both in sklearn `Pipeline` (imputer → scaler → model)
-- **Export**: `joblib.dump(pipeline, "backend/model.pkl")`
+- **Task**: **Classification** — predict match result: 0 = home win, 1 = draw, 2 = away win
+- **Features** (9, per match): `home_avg_goals`, `away_avg_goals`, `goal_diff`, `home_total_matches`, `away_total_matches`, `home_wins`, `away_wins`, `year`, `count_teams`
+- **Random split**: `train_test_split(test_size=0.2, random_state=42)` — 998 train / 250 test
+- **Model**: `RandomForestClassifier(n_estimators=100, max_depth=10)` — no sklearn Pipeline
+- **Accuracy**: 64.80 % on test set
+- **Export**: `joblib.dump(bundle, "backend/model.pkl")` where bundle = `{model, home_stats, away_stats, median_year, median_count_teams}`
 
-The Pydantic `Features` model in `backend/main.py` must match these 8 feature names exactly — order/types must match training.
+The `POST /api/predict` endpoint receives `{home_team: str, away_team: str}` — feature construction (stat lookup) happens in the backend, not in the client.
 
 ## Architecture
 
 - `backend/main.py`: one file, CORS allows `localhost:5173`, loads `model.pkl` at startup; `/api/predict` and `/api/stats` are the main endpoints (TODOs remain)
 - `frontend/src/api.ts`: all API calls centralized here; use `useQuery`/`useMutation` from React Query — no bare `fetch` in components
 - `frontend/src/App.tsx`: three dashboard sections (stats, prediction form, model performance)
-- `frontend/src/PredictionForm.tsx`: controlled form with React Query mutation, one field per feature
+- `frontend/src/PredictionForm.tsx`: controlled form with React Query mutation, 2 text fields (home_team / away_team), displays prediction + probabilities
 - Import alias: `@/` → `src/`; shadcn components: `npx shadcn@latest add <component>`; charts always inside `<ResponsiveContainer>`
 
 ## Conventions (from `CodeBase/CLAUDE.md`)
@@ -66,7 +67,7 @@ The Pydantic `Features` model in `backend/main.py` must match these 8 feature na
 - Server data → **React Query**; local state → `useState`; no global state library
 - Surgical edits only; don't rewrite working files wholesale
 - Never modify an endpoint contract without flagging it
-- Common errors: CORS → check ports match; blank chart → missing `<ResponsiveContainer>` or empty `/api/stats`; model crash → feature order/types mismatch with training
+- Common errors: CORS → check ports match; blank chart → missing `<ResponsiveContainer>` or empty `/api/stats`; model crash → bundle keys missing or team name not found in stats dict
 
 ## Development Agent Workflow
 
@@ -140,7 +141,7 @@ Après chaque tâche, exécuter dans cet ordre :
 browser_navigate → http://localhost:8000/api/health
   → vérifier {"status":"ok","model_loaded":true}
 browser_navigate → http://localhost:8000/api/stats   (après B3)
-  → vérifier top_teams, stage_distribution, metrics présents
+  → vérifier top_teams_wins, top_teams_goals, metrics.accuracy présents
 ```
 
 Pour `/api/predict`, utiliser `browser_evaluate` pour envoyer un POST :
@@ -148,12 +149,7 @@ Pour `/api/predict`, utiliser `browser_evaluate` pour envoyer un POST :
 fetch('http://localhost:8000/api/predict', {
   method: 'POST',
   headers: {'Content-Type':'application/json'},
-  body: JSON.stringify({
-    nb_participations:22, taux_victoire_historique:0.65,
-    buts_marques_moy:1.8, buts_encaisses_moy:0.9,
-    diff_buts_moy:0.9, meilleur_stade_atteint:6,
-    stade_dernier_tournoi:4, est_hote:0
-  })
+  body: JSON.stringify({home_team: 'France', away_team: 'Mexico'})
 }).then(r=>r.json()).then(console.log)
 ```
 
@@ -191,7 +187,7 @@ Règles du commit :
 ### 7. Checklist de validation finale
 
 - `GET /api/health` → `{"status": "ok", "model_loaded": true}`
-- `POST /api/predict` (8 features) → `{"predicted_stage": float, "stage_label": string}`
-- `GET /api/stats` → objet avec `top_teams`, `stage_distribution`, `metrics`
-- Dashboard charge dans le navigateur, formulaire soumettable, graphique visible, métriques affichées
+- `POST /api/predict` `{home_team, away_team}` → `{prediction, confidence, probabilities, home_stats, away_stats}`
+- `GET /api/stats` → objet avec `top_teams_wins`, `top_teams_goals`, `metrics.accuracy`
+- Dashboard charge dans le navigateur, formulaire soumettable, graphique visible, accuracy affichée
 - `npm run typecheck` → 0 erreurs

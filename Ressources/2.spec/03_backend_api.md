@@ -2,7 +2,7 @@
 
 ## Responsabilités
 
-- Charger `model.pkl` au démarrage (une seule fois)
+- Charger le bundle `model.pkl` au démarrage (une seule fois) : modèle RFC + dicts de stats + médians
 - Exposer les endpoints REST consommés par le frontend
 - Servir les fichiers statiques du frontend en production
 
@@ -13,33 +13,42 @@ Vérification que l'API est opérationnelle.
 
 **Réponse** :
 ```json
-{ "status": "ok" }
+{ "status": "ok", "model_loaded": true }
 ```
 
 ---
 
 ### `POST /api/predict`
-Prédit le stade attendu pour une équipe en 2026.
+Prédit le résultat d'un match entre deux équipes.
 
-**Corps de la requête** (Pydantic `Features`) :
+**Corps de la requête** (Pydantic `MatchInput`) :
 ```json
 {
-  "nb_participations": 22,
-  "taux_victoire_historique": 0.65,
-  "buts_marques_moy": 1.8,
-  "buts_encaisses_moy": 0.9,
-  "diff_buts_moy": 0.9,
-  "meilleur_stade_atteint": 6,
-  "stade_dernier_tournoi": 4,
-  "est_hote": 0
+  "home_team": "France",
+  "away_team": "Mexico"
 }
 ```
 
 **Réponse** :
 ```json
 {
-  "predicted_stage": 5.2,
-  "stage_label": "Finale"
+  "prediction": "Victoire France",
+  "confidence": 0.4829,
+  "probabilities": {
+    "home_win": 0.4829,
+    "draw": 0.3160,
+    "away_win": 0.2012
+  },
+  "home_stats": {
+    "avg_goals": 2.1,
+    "total_matches": 45,
+    "wins": 28
+  },
+  "away_stats": {
+    "avg_goals": 1.4,
+    "total_matches": 19,
+    "wins": 11
+  }
 }
 ```
 
@@ -50,33 +59,46 @@ Prédit le stade attendu pour une équipe en 2026.
 ### `GET /api/stats`
 Statistiques agrégées pour alimenter les graphiques du dashboard.
 
-**Réponse** (à définir selon les graphiques souhaités) :
+**Réponse** :
 ```json
 {
-  "top_teams": [...],
-  "stage_distribution": {...},
-  "metrics": { "mae": 0.8, "rmse": 1.1 }
+  "top_teams_wins": [
+    {"label": "Hungary", "value": 83.33},
+    {"label": "Brazil", "value": 74.53},
+    ...
+  ],
+  "top_teams_goals": [
+    {"label": "Hungary", "value": 4.06},
+    {"label": "Norway", "value": 2.73},
+    ...
+  ],
+  "metrics": {
+    "accuracy": 0.6480
+  }
 }
 ```
+
+`top_teams_wins` : top 10 par pourcentage de victoires (min 5 matchs), valeur = pourcentage (float).
+`top_teams_goals` : top 10 par moyenne de buts marqués (min 5 matchs), valeur = moyenne (float).
 
 ## Structure du fichier `main.py`
 
 ```
 FastAPI app
 ├── CORS middleware (origins: localhost:5173)
-├── Chargement model.pkl au startup
+├── Chargement model.pkl au startup (bundle dict)
 ├── GET  /api/health
-├── POST /api/predict
-├── GET  /api/stats
+├── POST /api/predict  ← body: {home_team, away_team}
+├── GET  /api/stats    ← retourne top_teams_wins, top_teams_goals, metrics
 └── [StaticFiles — décommenté en production]
 ```
 
 ## Bonnes pratiques
 
-- Une seule instance du modèle en mémoire (variable globale au module)
+- Une seule instance du bundle en mémoire (variable globale au module)
 - Validation automatique des entrées via Pydantic — pas de validation manuelle
 - Jamais de ré-entraînement en production
-- Les types Pydantic doivent correspondre exactement aux types numpy attendus par sklearn
+- Pour une équipe inconnue dans les stats, renvoyer des stats à 0 plutôt qu'une erreur
 
 ## Lancer le backend
 
@@ -99,17 +121,19 @@ graph LR
 
     subgraph API ["Backend FastAPI :8000"]
         UC1(["Verifier la sante\nGET /api/health"])
-        UC2(["Obtenir une prediction\nPOST /api/predict"])
+        UC2(["Predire resultat match\nPOST /api/predict"])
         UC3(["Obtenir les statistiques\nGET /api/stats"])
-        UC4(["Valider les features\nvia Pydantic"])
-        UC5(["Servir le front builte\nStaticFiles — prod"])
+        UC4(["Valider les noms equipes\nvia Pydantic MatchInput"])
+        UC5(["Lookup stats home/away\ndans home_stats/away_stats"])
+        UC6(["Servir le front builte\nStaticFiles — prod"])
     end
 
     FE --> UC1
     FE --> UC2
     FE --> UC3
-    ADM --> UC5
+    ADM --> UC6
     UC2 -.->|«include»| UC4
+    UC2 -.->|«include»| UC5
 
     style FE fill:#fff,stroke:#000
     style ADM fill:#fff,stroke:#000
@@ -119,25 +143,34 @@ graph LR
 
 ```mermaid
 classDiagram
-    class Features {
-        +int nb_participations
-        +float taux_victoire_historique
-        +float buts_marques_moy
-        +float buts_encaisses_moy
-        +float diff_buts_moy
-        +int meilleur_stade_atteint
-        +int stade_dernier_tournoi
-        +int est_hote
+    class MatchInput {
+        +str home_team
+        +str away_team
     }
 
     class PredictResponse {
-        +float predicted_stage
-        +str stage_label
+        +str prediction
+        +float confidence
+        +ProbDict probabilities
+        +TeamStatDict home_stats
+        +TeamStatDict away_stats
+    }
+
+    class ProbDict {
+        +float home_win
+        +float draw
+        +float away_win
+    }
+
+    class TeamStatDict {
+        +float avg_goals
+        +int total_matches
+        +int wins
     }
 
     class StatsResponse {
-        +list~StatItem~ top_teams
-        +dict stage_distribution
+        +list~StatItem~ top_teams_wins
+        +list~StatItem~ top_teams_goals
         +ModelMetrics metrics
     }
 
@@ -147,13 +180,13 @@ classDiagram
     }
 
     class ModelMetrics {
-        +float mae
-        +float rmse
-        +float r2
+        +float accuracy
     }
 
-    Features --> PredictResponse : POST /api/predict
-    StatsResponse "1" *-- "0..*" StatItem : top_teams
+    MatchInput --> PredictResponse : POST /api/predict
+    PredictResponse "1" *-- "1" ProbDict : probabilities
+    PredictResponse "1" *-- "2" TeamStatDict : home/away_stats
+    StatsResponse "1" *-- "0..*" StatItem : top_teams_*
     StatsResponse "1" *-- "1" ModelMetrics : metrics
 ```
 
@@ -163,16 +196,20 @@ classDiagram
 sequenceDiagram
     participant FE as Frontend React
     participant API as FastAPI :8000
-    participant ML as model.pkl
+    participant BU as bundle (model.pkl)
 
-    FE->>API: POST /api/predict\n{8 features JSON}
-    API->>API: Pydantic valide Features
-    alt modèle absent
+    FE->>API: POST /api/predict\n{home_team, away_team}
+    API->>API: Pydantic valide MatchInput
+    alt bundle absent
         API-->>FE: 503 model.pkl manquant
-    else modèle chargé
-        API->>ML: predict([[f1, f2, ..., f8]])
-        ML-->>API: [4.8]
-        API->>API: round → 5, label → "Finale"
-        API-->>FE: {predicted_stage: 4.8, stage_label: "Finale"}
+    else bundle chargé
+        API->>BU: lookup home_stats[home_team]
+        API->>BU: lookup away_stats[away_team]
+        API->>BU: model.predict([[9 features]])
+        BU-->>API: classe predite (0/1/2)
+        API->>BU: model.predict_proba([[9 features]])
+        BU-->>API: [p_home, p_draw, p_away]
+        API->>API: construire label prediction
+        API-->>FE: {prediction, confidence, probabilities, home_stats, away_stats}
     end
 ```

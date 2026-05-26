@@ -1,41 +1,64 @@
-# B1 — Modèle Pydantic `Features`
+# B1 — Modèle Pydantic `MatchInput`
 
 ## Objectif
 
-Remplacer le `pass` dans la classe `Features` par les 8 champs qui correspondent exactement aux features utilisées à l'entraînement (même nom, même type, même ordre).
+Remplacer le `pass` dans la classe d'entrée par les 2 champs qui correspondent exactement à l'interface du nouveau modèle : `home_team` et `away_team` (noms d'équipes en clair). Le vecteur de 9 features est construit **côté backend** à partir des stats stockées dans le bundle.
 
 ## Fichier cible
 
-`CodeBase/backend/main.py` — lignes 24–27
+`CodeBase/backend/main.py`
 
 ## Code à écrire
 
 ```python
-class Features(BaseModel):
-    nb_participations: int
-    taux_victoire_historique: float
-    buts_marques_moy: float
-    buts_encaisses_moy: float
-    diff_buts_moy: float
-    meilleur_stade_atteint: int
-    stade_dernier_tournoi: int
-    est_hote: int  # 0 ou 1
+class MatchInput(BaseModel):
+    home_team: str   # ex: "France", "Brazil"
+    away_team: str   # ex: "Mexico", "Germany"
+```
+
+## Labels de résultat (à ajouter comme constante)
+
+```python
+RESULT_LABELS = {
+    0: "home_win",
+    1: "draw",
+    2: "away_win",
+}
+```
+
+## Chargement du bundle au démarrage
+
+```python
+import joblib
+from pathlib import Path
+
+bundle = None
+try:
+    bundle = joblib.load(Path(__file__).parent / "model.pkl")
+except FileNotFoundError:
+    pass
+
+# Accès aux composants du bundle :
+# bundle["model"]              → RandomForestClassifier
+# bundle["home_stats"]         → dict {team: {avg_goals, total_matches, wins}}
+# bundle["away_stats"]         → dict {team: {avg_goals, total_matches, wins}}
+# bundle["median_year"]        → float
+# bundle["median_count_teams"] → float
 ```
 
 ## Pourquoi ces types
 
-- `int` pour les compteurs entiers (`nb_participations`, `meilleur_stade_atteint`, `stade_dernier_tournoi`, `est_hote`)
-- `float` pour les moyennes et taux (sklearn accepte float64, compatible Python float)
-- L'ordre dans la classe détermine l'ordre dans le tableau numpy → doit correspondre à l'entraînement
+- `str` pour les noms d'équipes — le backend fait le lookup dans les dicts de stats
+- Pydantic valide que les deux champs sont des strings non-vides
+- L'équipe peut être inconnue (pas dans les 84) → stats ramenées à 0, pas d'erreur
 
 ## Validation
 
 ```bash
-# Tester manuellement après démarrage du backend
+# Le endpoint doit accepter sans erreur 422 :
 curl -X POST http://localhost:8000/api/predict \
   -H "Content-Type: application/json" \
-  -d '{"nb_participations":22,"taux_victoire_historique":0.65,"buts_marques_moy":1.8,"buts_encaisses_moy":0.9,"diff_buts_moy":0.9,"meilleur_stade_atteint":6,"stade_dernier_tournoi":4,"est_hote":0}'
-# → doit retourner sans erreur de validation Pydantic (422)
+  -d '{"home_team":"France","away_team":"Mexico"}'
 ```
 
 ## Dépendances

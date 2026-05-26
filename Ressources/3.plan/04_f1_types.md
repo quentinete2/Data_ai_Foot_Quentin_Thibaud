@@ -10,27 +10,43 @@ Mettre à jour `api.ts` pour que les types TypeScript correspondent exactement a
 
 ## Types à ajouter / modifier
 
-### Type `Features` (corps de la requête predict)
+### Type `MatchInput` (corps de la requête predict)
 
 ```typescript
-export type Features = {
-  nb_participations: number
-  taux_victoire_historique: number
-  buts_marques_moy: number
-  buts_encaisses_moy: number
-  diff_buts_moy: number
-  meilleur_stade_atteint: number
-  stade_dernier_tournoi: number
-  est_hote: number  // 0 | 1
+export type MatchInput = {
+  home_team: string
+  away_team: string
 }
 ```
 
 ### Type `PredictResponse` (réponse de /api/predict)
 
 ```typescript
+export type TeamStats = {
+  avg_goals: number
+  total_matches: number
+  wins: number
+}
+
 export type PredictResponse = {
-  predicted_stage: number
-  stage_label: string
+  prediction: string   // ex: "Victoire France" | "Match Nul" | "Victoire Mexico"
+  confidence: number   // probabilité de la classe prédite
+  probabilities: {
+    home_win: number
+    draw: number
+    away_win: number
+  }
+  home_stats: TeamStats
+  away_stats: TeamStats
+}
+```
+
+### Type `StatItem` (partagé)
+
+```typescript
+export type StatItem = {
+  label: string
+  value: number
 }
 ```
 
@@ -38,22 +54,35 @@ export type PredictResponse = {
 
 ```typescript
 export type StatsResponse = {
-  top_teams: StatItem[]
-  stage_distribution: Record<string, number>
-  metrics: { mae: number; rmse: number; r2: number }
+  top_teams_wins: StatItem[]
+  top_teams_goals: StatItem[]
+  metrics: { accuracy: number }
 }
 ```
 
 ### Mise à jour des signatures de fonctions
 
 ```typescript
-export async function predire(features: Features): Promise<PredictResponse> { ... }
-export async function getStats(): Promise<StatsResponse> { ... }
+export async function predire(match: MatchInput): Promise<PredictResponse> {
+  const res = await fetch('/api/predict', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(match),
+  })
+  if (!res.ok) throw new Error(`predict error ${res.status}`)
+  return res.json()
+}
+
+export async function getStats(): Promise<StatsResponse> {
+  const res = await fetch('/api/stats')
+  if (!res.ok) throw new Error(`stats error ${res.status}`)
+  return res.json()
+}
 ```
 
 ## Pourquoi
 
-Le `PredictionForm.tsx` utilise actuellement `Record<string, unknown>` pour `valeurs` — après F1, ce type sera `Features`, ce qui permet à TypeScript de valider les champs du formulaire.
+Le `PredictionForm.tsx` utilisait un type vague — après F1, il recevra `MatchInput` (2 champs texte) et affichera `PredictResponse` (prediction + probabilities), ce qui permet à TypeScript de valider tous les accès.
 
 ## Validation
 

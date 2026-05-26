@@ -2,113 +2,117 @@
 
 ## Tâche
 
-**Régression** : prédire `stade_atteint` (valeur continue 1.0–6.0) puis arrondir pour obtenir le stade final.
+**Classification multi-classe** : prédire le résultat d'un match (0 = victoire équipe à domicile, 1 = match nul, 2 = victoire équipe à l'extérieur).
 
-> Pourquoi la régression plutôt que la classification ? Les stades ont un ordre naturel (6 > 5 > 4…), la régression capture mieux cette notion de "meilleur" ou "moins bon" résultat.
+> Pourquoi la classification plutôt que la régression ? Les résultats sont discrets et non-ordonnés (un nul n'est pas "entre" une victoire et une défaite dans le sens ML). Le classificateur retourne aussi directement des probabilités par classe, utiles pour l'affichage.
 
-## Modèles entraînés
+## Modèle entraîné
 
-| Modèle | Hyperparamètres par défaut | Avantage |
-|--------|--------------------------|----------|
-| `RandomForestRegressor` | `n_estimators=100` | Robuste, peu sensible aux outliers |
-| `GradientBoostingRegressor` | `n_estimators=100` | Souvent plus précis, apprend sur les erreurs |
+| Modèle | Hyperparamètres | Avantage |
+|--------|----------------|----------|
+| `RandomForestClassifier` | `n_estimators=100`, `max_depth=10`, `random_state=42` | Robuste, résistant à l'overfitting, probabilités calibrées |
 
-Les deux modèles sont encapsulés dans un **pipeline sklearn** :
+Le modèle est entraîné **directement** (pas dans un Pipeline sklearn — pas d'imputer ni de scaler) car les features sont déjà des statistiques numériques propres sans valeurs manquantes résiduelles (NaN remplis avec 0).
 
+## Features (ordre strict — 9 colonnes)
+
+```python
+features_for_model = [
+    'home_avg_goals',
+    'away_avg_goals',
+    'goal_diff',
+    'home_total_matches',
+    'away_total_matches',
+    'home_wins',
+    'away_wins',
+    'year',
+    'count_teams',
+]
 ```
-SimpleImputer(strategy='mean')
-    → StandardScaler()
-        → Model
-```
+
+**Important** : le modèle Pydantic `MatchInput` dans `backend/main.py` ne reçoit que `home_team` et `away_team` (noms d'équipes). La construction du vecteur de features (lookup dans `home_stats`/`away_stats`) se fait côté backend.
 
 ## Métriques d'évaluation
 
-- **MAE** (Mean Absolute Error) : erreur moyenne en nombre de stades
-- **RMSE** (Root Mean Squared Error) : pénalise les grosses erreurs
-- Évaluer sur le **test set 2022** uniquement
+| Métrique | Valeur obtenue | Signification |
+|----------|---------------|---------------|
+| Accuracy | **64.80 %** | 65 % des matchs prédits correctement |
+| Precision (macro) | 0.56 | Précision moyenne par classe |
+| Recall (macro) | 0.53 | Rappel moyen par classe |
+| F1-score (macro) | 0.53 | Compromis précision/rappel |
 
-## Export
+Détail par classe :
+
+| Classe | Precision | Recall | F1 | Support |
+|--------|-----------|--------|----|---------|
+| Victoire domicile (0) | 0.70 | 0.83 | 0.76 | 143 |
+| Match nul (1) | 0.38 | 0.19 | 0.25 | 47 |
+| Victoire extérieur (2) | 0.61 | 0.57 | 0.59 | 60 |
+
+## Export (bundle complet)
 
 ```python
 import joblib
-joblib.dump(pipeline, "backend/model.pkl")
+
+bundle = {
+    "model": model,                          # RandomForestClassifier entraîné
+    "home_stats": home_stats,               # dict: team → {avg_goals, total_matches, wins}
+    "away_stats": away_stats,               # dict: team → {avg_goals, total_matches, wins}
+    "median_year": median_year,             # float — valeur médiane utilisée à l'inférence
+    "median_count_teams": median_count_teams, # float — idem
+}
+joblib.dump(bundle, "backend/model.pkl")
 ```
 
-Le backend charge le fichier une seule fois au démarrage via `joblib.load("model.pkl")`.
+Le backend charge le bundle : `bundle = joblib.load("model.pkl")`.
 
-## Contrat des features (ordre strict)
+## Interprétation des résultats de prédiction
 
-Le `predict()` du pipeline attend exactement ces 8 colonnes dans cet ordre :
+| Classe prédite | Label affiché | Équipe gagnante |
+|---|---|---|
+| 0 | "Victoire {home_team}" | Équipe à domicile |
+| 1 | "Match Nul" | Aucune |
+| 2 | "Victoire {away_team}" | Équipe à l'extérieur |
 
-```python
-["nb_participations", "taux_victoire_historique", "buts_marques_moy",
- "buts_encaisses_moy", "diff_buts_moy", "meilleur_stade_atteint",
- "stade_dernier_tournoi", "est_hote"]
-```
+La réponse inclut aussi les probabilités pour chaque classe (`predict_proba`), permettant d'afficher la confiance du modèle.
 
-**Important** : le modèle Pydantic `Features` dans `backend/main.py` doit correspondre exactement. Tout changement d'ordre ou de nom casse la prédiction silencieusement.
+## Équipes disponibles (84 équipes connues)
 
-## Interprétation du score
-
-| Score prédit | Stade |
-|---|---|
-| 1 | Phase de groupes |
-| 2 | Huitièmes de finale |
-| 3 | Quarts de finale |
-| 4 | Demi-finales |
-| 5 | Finale (2e place) |
-| 6 | Champion |
+Le dictionnaire `home_stats` contient 84 équipes issues des données historiques 1930–2022. Pour une équipe inconnue, les stats sont ramenées à 0 (comportement de la fonction `predict_match` du notebook).
 
 ---
 
-## Diagramme de classes UML — Pipeline sklearn
+## Diagramme de classes UML — Modèle
 
 ```mermaid
 classDiagram
-    class Pipeline {
-        +list steps
-        +fit(X, y) Pipeline
-        +predict(X) ndarray
-        +score(X, y) float
-    }
-
-    class SimpleImputer {
-        +strategy : str = "mean"
-        +fit_transform(X) ndarray
-    }
-
-    class StandardScaler {
-        +mean_ : ndarray
-        +scale_ : ndarray
-        +fit_transform(X) ndarray
-        +transform(X) ndarray
-    }
-
-    class BaseEstimator {
-        <<abstract>>
-        +fit(X, y)*
-        +predict(X)*
-    }
-
-    class RandomForestRegressor {
+    class RandomForestClassifier {
         +n_estimators : int = 100
+        +max_depth : int = 10
+        +random_state : int = 42
         +feature_importances_ : ndarray
         +fit(X, y) self
         +predict(X) ndarray
+        +predict_proba(X) ndarray
     }
 
-    class GradientBoostingRegressor {
-        +n_estimators : int = 100
-        +learning_rate : float = 0.1
-        +fit(X, y) self
-        +predict(X) ndarray
+    class TeamStats {
+        +float avg_goals
+        +int total_matches
+        +int wins
     }
 
-    Pipeline *-- SimpleImputer : etape 1
-    Pipeline *-- StandardScaler : etape 2
-    Pipeline *-- BaseEstimator : etape 3
-    RandomForestRegressor --|> BaseEstimator : herite
-    GradientBoostingRegressor --|> BaseEstimator : herite
+    class ModelBundle {
+        +RandomForestClassifier model
+        +dict~str, TeamStats~ home_stats
+        +dict~str, TeamStats~ away_stats
+        +float median_year
+        +float median_count_teams
+    }
+
+    ModelBundle *-- RandomForestClassifier : contient
+    ModelBundle "1" *-- "84" TeamStats : home_stats
+    ModelBundle "1" *-- "84" TeamStats : away_stats
 ```
 
 ## Cycle train / évaluation / export
@@ -116,15 +120,14 @@ classDiagram
 ```mermaid
 sequenceDiagram
     participant NB as Notebook
-    participant SK as sklearn
-    participant FS as Fichier
+    participant SK as RandomForestClassifier
+    participant FS as model.pkl
 
-    NB->>SK: fit(X_train 1930–2018, y_train)
-    SK-->>NB: pipeline entraîné
-    NB->>SK: predict(X_test 2022)
+    NB->>SK: fit(X_train 998 matchs, y_train)
+    SK-->>NB: modele entraine
+    NB->>SK: predict(X_test 250 matchs)
     SK-->>NB: y_pred
-    NB->>NB: calcul MAE, RMSE, R²
-    NB->>SK: fit(X_all 1930–2022, y_all) — retrain complet
-    SK-->>NB: pipeline final
-    NB->>FS: joblib.dump(pipeline, "backend/model.pkl")
+    NB->>NB: calcul accuracy 64.80%
+    NB->>NB: calcul rapport precision/recall/f1
+    NB->>FS: joblib.dump(bundle, "backend/model.pkl")
 ```

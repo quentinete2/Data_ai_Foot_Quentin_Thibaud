@@ -2,7 +2,7 @@
 
 ## Objectif
 
-Remplacer le TODO par 8 champs `<input>` typés, initialisés avec des valeurs par défaut représentatives, et afficher le résultat avec `predicted_stage` + `stage_label`.
+Remplacer le formulaire à 8 champs numériques par un formulaire à **2 champs texte** (noms d'équipes home et away), et afficher le résultat complet : prédiction, confiance, et tableau des probabilités.
 
 ## Fichier cible
 
@@ -11,87 +11,120 @@ Remplacer le TODO par 8 champs `<input>` typés, initialisés avec des valeurs p
 ## État initial du formulaire (valeurs par défaut)
 
 ```typescript
-const INITIAL: Features = {
-  nb_participations: 10,
-  taux_victoire_historique: 0.5,
-  buts_marques_moy: 1.2,
-  buts_encaisses_moy: 1.0,
-  diff_buts_moy: 0.2,
-  meilleur_stade_atteint: 3,
-  stade_dernier_tournoi: 2,
-  est_hote: 0,
+const INITIAL: MatchInput = {
+  home_team: "France",
+  away_team: "Brazil",
 }
 ```
 
-## Structure de chaque champ
-
-Chaque feature a :
-- un label lisible en français
-- un `input type="number"` avec `step` adapté (0.01 pour les floats, 1 pour les entiers)
-- une plage min/max cohérente avec les données réelles
-
-```typescript
-const FIELDS: Array<{
-  key: keyof Features
-  label: string
-  step: string
-  min: number
-  max: number
-}> = [
-  { key: "nb_participations",        label: "Nombre de participations",       step: "1",    min: 1,  max: 24 },
-  { key: "taux_victoire_historique", label: "Taux de victoire historique",    step: "0.01", min: 0,  max: 1  },
-  { key: "buts_marques_moy",         label: "Buts marqués (moy/match)",       step: "0.01", min: 0,  max: 6  },
-  { key: "buts_encaisses_moy",       label: "Buts encaissés (moy/match)",     step: "0.01", min: 0,  max: 6  },
-  { key: "diff_buts_moy",            label: "Différentiel de buts (moy)",     step: "0.01", min: -4, max: 4  },
-  { key: "meilleur_stade_atteint",   label: "Meilleur stade atteint (1–6)",   step: "1",    min: 1,  max: 6  },
-  { key: "stade_dernier_tournoi",    label: "Stade dernier tournoi (1–6)",    step: "1",    min: 1,  max: 6  },
-  { key: "est_hote",                 label: "Pays hôte (0 = non, 1 = oui)",  step: "1",    min: 0,  max: 1  },
-]
-```
-
-## Rendu des inputs (à l'intérieur du formulaire)
+## Structure du formulaire
 
 ```tsx
-{FIELDS.map(({ key, label, step, min, max }) => (
-  <div key={key} className="flex flex-col gap-1">
-    <label className="text-sm font-medium" htmlFor={key}>{label}</label>
-    <input
-      id={key}
-      type="number"
-      step={step}
-      min={min}
-      max={max}
-      value={valeurs[key]}
-      onChange={(e) =>
-        setValeurs((prev) => ({ ...prev, [key]: Number(e.target.value) }))
-      }
-      className="rounded border px-2 py-1 text-sm"
-      required
-    />
-  </div>
-))}
+import { useState } from 'react'
+import { useMutation } from '@tanstack/react-query'
+import { predire } from './api'
+import type { MatchInput } from './api'
+
+export default function PredictionForm() {
+  const [valeurs, setValeurs] = useState<MatchInput>(INITIAL)
+
+  const mutation = useMutation({ mutationFn: predire })
+
+  function onSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    mutation.mutate(valeurs)
+  }
+
+  return (
+    <form onSubmit={onSubmit} className="flex flex-col gap-4">
+      <div className="flex flex-col gap-1">
+        <label className="text-sm font-medium" htmlFor="home_team">
+          Équipe à domicile
+        </label>
+        <input
+          id="home_team"
+          type="text"
+          value={valeurs.home_team}
+          onChange={(e) => setValeurs((prev) => ({ ...prev, home_team: e.target.value }))}
+          placeholder="ex: France"
+          className="rounded border px-2 py-1 text-sm"
+          required
+        />
+      </div>
+
+      <div className="flex flex-col gap-1">
+        <label className="text-sm font-medium" htmlFor="away_team">
+          Équipe à l'extérieur
+        </label>
+        <input
+          id="away_team"
+          type="text"
+          value={valeurs.away_team}
+          onChange={(e) => setValeurs((prev) => ({ ...prev, away_team: e.target.value }))}
+          placeholder="ex: Brazil"
+          className="rounded border px-2 py-1 text-sm"
+          required
+        />
+      </div>
+
+      <button
+        type="submit"
+        disabled={mutation.isPending}
+        className="rounded bg-blue-700 px-4 py-2 text-white text-sm font-medium hover:bg-blue-800 disabled:opacity-50"
+      >
+        {mutation.isPending ? "Prédiction en cours…" : "Prédire"}
+      </button>
+
+      {mutation.isError && (
+        <p className="text-red-500 text-sm">Erreur lors de la prédiction.</p>
+      )}
+    </form>
+  )
+}
 ```
 
 ## Affichage du résultat
 
-Remplacer l'affichage actuel (qui cherche `prediction`) par :
-
 ```tsx
 {mutation.data && (
-  <div className="rounded-lg bg-green-50 p-4">
-    <p className="text-sm text-gray-600">Stade prédit</p>
-    <p className="text-2xl font-bold">{mutation.data.stage_label}</p>
-    <p className="text-sm text-gray-500">Score : {mutation.data.predicted_stage.toFixed(2)}</p>
+  <div className="rounded-lg bg-green-50 p-4 mt-4 flex flex-col gap-3">
+    <div>
+      <p className="text-sm text-gray-600">Résultat prédit</p>
+      <p className="text-2xl font-bold">{mutation.data.prediction}</p>
+      <p className="text-sm text-gray-500">
+        Confiance : {(mutation.data.confidence * 100).toFixed(1)} %
+      </p>
+    </div>
+
+    <div className="grid grid-cols-3 gap-2 text-center text-sm">
+      <div className="rounded border p-2">
+        <p className="font-semibold">{(mutation.data.probabilities.home_win * 100).toFixed(1)} %</p>
+        <p className="text-gray-500">Dom.</p>
+      </div>
+      <div className="rounded border p-2">
+        <p className="font-semibold">{(mutation.data.probabilities.draw * 100).toFixed(1)} %</p>
+        <p className="text-gray-500">Nul</p>
+      </div>
+      <div className="rounded border p-2">
+        <p className="font-semibold">{(mutation.data.probabilities.away_win * 100).toFixed(1)} %</p>
+        <p className="text-gray-500">Ext.</p>
+      </div>
+    </div>
   </div>
 )}
 ```
 
 ## Validation
 
-- Tous les champs ont `required` → le navigateur bloque la soumission si vide
-- `npm run typecheck` → 0 erreur (après F1 qui définit le type `Features`)
+- Les 2 champs ont `required` → le navigateur bloque si vide
+- `npm run typecheck` → 0 erreur (après F1 qui définit `MatchInput` et `PredictResponse`)
+- Tester avec "France" vs "Mexico" → résultat cohérent avec la sortie du notebook
+
+## Note sur les équipes connues
+
+84 équipes sont connues par le modèle. Un nom inconnu ne plante pas (stats à 0), mais la prédiction sera moins pertinente. Pas besoin d'un dropdown pour ce cours — un champ texte libre est suffisant.
 
 ## Dépendances
 
-- F1 doit être terminé (type `Features` et `PredictResponse` dans `api.ts`)
+- F1 doit être terminé (`MatchInput` et `PredictResponse` dans `api.ts`)
 - B2 doit fonctionner pour tester la soumission

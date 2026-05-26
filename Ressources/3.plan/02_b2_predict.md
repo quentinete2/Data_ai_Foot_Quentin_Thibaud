@@ -2,72 +2,126 @@
 
 ## Objectif
 
-Implémenter la logique de prédiction dans `predict()` : construire le vecteur de features dans le bon ordre, appeler `model.predict()`, retourner le stage prédit + son label texte.
+Implémenter la logique de prédiction dans `predict()` : récupérer les stats des deux équipes dans le bundle, construire le vecteur de 9 features, appeler `model.predict()` et `model.predict_proba()`, retourner la prédiction + confiance + probabilités + stats des deux équipes.
 
 ## Fichier cible
 
-`CodeBase/backend/main.py` — lignes 35–43
+`CodeBase/backend/main.py`
 
-## Labels des stades
+## Logique de lookup des stats
 
 ```python
-STAGE_LABELS = {
-    1: "Phase de groupes",
-    2: "Huitièmes de finale",
-    3: "Quarts de finale",
-    4: "Demi-finales",
-    5: "Finale",
-    6: "Vainqueur",
-}
+def get_team_stats(stats_dict: dict, team: str) -> dict:
+    """Retourne les stats d'une équipe, ou des stats à 0 si inconnue."""
+    return stats_dict.get(team, {"avg_goals": 0, "total_matches": 0, "wins": 0})
 ```
-
-À ajouter en haut du fichier (après les imports, avant la classe `Features`).
 
 ## Logique de l'endpoint
 
 ```python
 from fastapi import HTTPException
+import numpy as np
 
 @app.post("/api/predict")
-def predict(features: Features):
-    if model is None:
+def predict(match: MatchInput):
+    if bundle is None:
         raise HTTPException(status_code=503, detail="model.pkl manquant")
 
-    x = [[
-        features.nb_participations,
-        features.taux_victoire_historique,
-        features.buts_marques_moy,
-        features.buts_encaisses_moy,
-        features.diff_buts_moy,
-        features.meilleur_stade_atteint,
-        features.stade_dernier_tournoi,
-        features.est_hote,
-    ]]
-    pred = float(model.predict(x)[0])
-    stage_int = max(1, min(6, round(pred)))
+    model = bundle["model"]
+    home_stats = bundle["home_stats"]
+    away_stats = bundle["away_stats"]
+    median_year = bundle["median_year"]
+    median_count_teams = bundle["median_count_teams"]
+
+    home_stat = get_team_stats(home_stats, match.home_team)
+    away_stat = get_team_stats(away_stats, match.away_team)
+
+    features = np.array([[
+        home_stat["avg_goals"],
+        away_stat["avg_goals"],
+        home_stat["avg_goals"] - away_stat["avg_goals"],  # goal_diff
+        home_stat["total_matches"],
+        away_stat["total_matches"],
+        home_stat["wins"],
+        away_stat["wins"],
+        median_year,
+        median_count_teams,
+    ]])
+
+    prediction_class = int(model.predict(features)[0])
+    probabilities = model.predict_proba(features)[0]
+
+    label = (
+        f"Victoire {match.home_team}" if prediction_class == 0
+        else "Match Nul" if prediction_class == 1
+        else f"Victoire {match.away_team}"
+    )
+
     return {
-        "predicted_stage": pred,
-        "stage_label": STAGE_LABELS.get(stage_int, "Inconnu"),
+        "prediction": label,
+        "confidence": float(probabilities[prediction_class]),
+        "probabilities": {
+            "home_win": float(probabilities[0]),
+            "draw": float(probabilities[1]),
+            "away_win": float(probabilities[2]),
+        },
+        "home_stats": home_stat,
+        "away_stats": away_stat,
     }
+```
+
+## Ordre des features (doit correspondre à l'entraînement)
+
+```python
+features_for_model = [
+    'home_avg_goals',    # home_stat["avg_goals"]
+    'away_avg_goals',    # away_stat["avg_goals"]
+    'goal_diff',         # home - away avg_goals
+    'home_total_matches',
+    'away_total_matches',
+    'home_wins',
+    'away_wins',
+    'year',              # median_year
+    'count_teams',       # median_count_teams
+]
 ```
 
 ## Points importants
 
-- `raise HTTPException(503)` au lieu de retourner un dict d'erreur (HTTP sémantique correct, le frontend peut détecter l'erreur proprement)
-- `round(pred)` + clamp `[1, 6]` pour afficher un label cohérent même si le modèle prédit hors-range
-- L'ordre des features dans `x` doit être identique à l'ordre d'entraînement dans le notebook (cell 12)
+- `raise HTTPException(503)` si le bundle est absent
+- `get_team_stats` retourne des stats à 0 pour les équipes non connues (pas d'erreur 404)
+- `float()` sur les valeurs numpy pour la sérialisation JSON (numpy float64 n'est pas JSON-serializable nativement)
+- Les probabilités somment à 1.0 (garantie de `predict_proba`)
 
 ## Validation
 
 ```bash
-# Réponse attendue :
-# {"predicted_stage": 4.8, "stage_label": "Demi-finales"}
+# Exemple France vs Mexico — réponse attendue similaire au notebook :
 curl -X POST http://localhost:8000/api/predict \
   -H "Content-Type: application/json" \
-  -d '{"nb_participations":22,"taux_victoire_historique":0.65,"buts_marques_moy":1.8,"buts_encaisses_moy":0.9,"diff_buts_moy":0.9,"meilleur_stade_atteint":6,"stade_dernier_tournoi":4,"est_hote":0}'
+  -d '{"home_team":"France","away_team":"Mexico"}'
+
+# Réponse attendue :
+# {
+#   "prediction": "Victoire France",
+#   "confidence": 0.4829,
+#   "probabilities": {"home_win": 0.4829, "draw": 0.3160, "away_win": 0.2012},
+#   "home_stats": {...},
+#   "away_stats": {...}
+# }
+```
+
+## Validation Playwright (via browser_evaluate)
+
+```javascript
+fetch('http://localhost:8000/api/predict', {
+  method: 'POST',
+  headers: {'Content-Type':'application/json'},
+  body: JSON.stringify({home_team: 'France', away_team: 'Mexico'})
+}).then(r=>r.json()).then(console.log)
 ```
 
 ## Dépendances
 
-- B1 doit être terminé (classe `Features` définie)
-- `model.pkl` doit exister dans `backend/`
+- B1 doit être terminé (`MatchInput` défini, bundle chargé au startup)
+- `model.pkl` (bundle) doit exister dans `backend/`

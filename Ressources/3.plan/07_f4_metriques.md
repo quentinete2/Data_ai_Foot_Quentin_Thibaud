@@ -2,15 +2,17 @@
 
 ## Objectif
 
-Afficher les métriques MAE, RMSE et R² retournées par `/api/stats` dans la section "Performance du modèle" de `App.tsx`.
+Afficher l'**accuracy** du modèle retournée par `/api/stats` dans la section "Performance du modèle" de `App.tsx`.
 
 ## Fichier cible
 
-`CodeBase/frontend/src/App.tsx` — section ligne 28-30
+`CodeBase/frontend/src/App.tsx`
 
 ## Contexte
 
 `stats.metrics` est déjà disponible depuis le même `useQuery` utilisé pour `StatsChart` (F3). Pas de nouvelle requête nécessaire.
+
+Le modèle est un `RandomForestClassifier` de **classification** (pas de régression) — les métriques pertinentes sont `accuracy`, non MAE/RMSE/R².
 
 ## Code à écrire (section "Performance du modèle")
 
@@ -18,10 +20,11 @@ Afficher les métriques MAE, RMSE et R² retournées par `/api/stats` dans la se
 <section className="mt-6">
   <h2 className="text-lg font-semibold">Performance du modèle</h2>
   {stats?.metrics ? (
-    <div className="mt-3 grid grid-cols-3 gap-4">
-      <MetricCard label="MAE" value={stats.metrics.mae.toFixed(2)} />
-      <MetricCard label="RMSE" value={stats.metrics.rmse.toFixed(2)} />
-      <MetricCard label="R²" value={stats.metrics.r2.toFixed(2)} />
+    <div className="mt-3 grid grid-cols-1 gap-4 max-w-xs">
+      <MetricCard
+        label="Accuracy (test set)"
+        value={`${(stats.metrics.accuracy * 100).toFixed(1)} %`}
+      />
     </div>
   ) : (
     <p className="text-gray-400 text-sm">En attente des stats…</p>
@@ -42,21 +45,22 @@ function MetricCard({ label, value }: { label: string; value: string }) {
 }
 ```
 
-## Interprétation des métriques (à titre informatif)
+## Interprétation de la métrique
 
-| Métrique | Signification | Valeur typique pour ce modèle |
-|----------|--------------|-------------------------------|
-| MAE | Erreur absolue moyenne sur `stade_atteint` (1–6) | ~0.8 = erreur de ±1 stade |
-| RMSE | Erreur quadratique moyenne | ~1.0 |
-| R² | Part de variance expliquée | ~0.6 = bon pour ce type de données |
+| Métrique | Valeur | Signification |
+|----------|--------|---------------|
+| Accuracy | 64.80 % | 65 % des matchs prédits correctement sur le test set (250 matchs) |
+
+> Le modèle est meilleur sur les victoires à domicile (F1 = 0.76) que sur les nuls (F1 = 0.25). C'est typique en prédiction de foot — les nuls sont structurellement difficiles à prédire.
 
 ## Validation
 
 - Ouvrir `http://localhost:5173`
-- La section affiche 3 cartes avec les valeurs numériques
+- La section affiche une carte avec "64.8 %" (ou la valeur exacte retournée par l'API)
 - `npm run typecheck` → 0 erreur
+- La métrique `accuracy` dans le type `StatsResponse` est un `number` (pas une string)
 
 ## Dépendances
 
 - F3 doit être terminé (`stats` est déjà chargé via le même `useQuery`)
-- B3 doit retourner `metrics` avec les bonnes clés (`mae`, `rmse`, `r2`)
+- B3 doit retourner `metrics` avec la clé `accuracy` (pas `mae`/`rmse`/`r2`)
