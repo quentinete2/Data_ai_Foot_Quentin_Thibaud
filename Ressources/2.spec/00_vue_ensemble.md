@@ -18,7 +18,7 @@ Cible : `stade_atteint` (entier de 1 à 6 : phase de groupes → champion)
 | 2 | Entraîner un modèle ML et l'exporter (`model.pkl`) | Haute |
 | 3 | API REST (FastAPI) exposant les prédictions | Haute |
 | 4 | Dashboard React affichant stats + prédictions | Haute |
-| 5 | Déploiement sur Azure (binaire + app) | Basse (futur) |
+| 5 | Déploiement Docker (backend + frontend) | Basse (futur) |
 
 ## Architecture cible
 

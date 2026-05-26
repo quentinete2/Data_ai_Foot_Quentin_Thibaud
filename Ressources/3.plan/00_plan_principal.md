@@ -49,6 +49,19 @@ Détails : voir `04_f1_types.md`, `05_f2_form.md`, `06_f3_chart.md`, `07_f4_metr
 
 ---
 
+## Déploiement Docker (après validation locale)
+
+| ID | Sous-tâche | Fichier | Complexité |
+|----|-----------|---------|-----------|
+| D1-a | `Dockerfile` backend | `CodeBase/backend/Dockerfile` | Faible |
+| D1-b | `Dockerfile` frontend (multi-stage) | `CodeBase/frontend/Dockerfile` | Faible |
+| D1-c | `docker-compose.yml` | `CodeBase/docker-compose.yml` | Faible |
+| D1-d | CORS : ajouter `http://localhost` | `main.py` | Faible |
+
+Détails : voir `08_deploiement_docker.md`
+
+---
+
 ## Critères de validation finale
 
 - `GET /api/health` → `{"status": "ok", "model_loaded": true}`
