@@ -11,6 +11,13 @@ Format par entrée :
 
 <!-- Les agents ajoutent leurs entrées ici, la plus récente en haut -->
 
+## [F1-F4] 2026-05-26 — Implémentation complète du frontend
+- `CodeBase/frontend/src/api.ts` : types TS alignés sur le backend (MatchInput, PredictResponse, TeamStats, StatItem, StatsResponse) + signatures predire/getStats mises à jour
+- `CodeBase/frontend/src/PredictionForm.tsx` : formulaire 2 champs texte (home_team/away_team), affichage résultat (prediction + confidence + 3 probabilités en grille)
+- `CodeBase/frontend/src/StatsChart.tsx` : nouveau composant BarChart Recharts (top_teams_wins, ResponsiveContainer, labels inclinés)
+- `CodeBase/frontend/src/App.tsx` : query activée (enabled:true), StatsChart intégré, MetricCard avec accuracy 64.8 %
+- Avant : TODOs partout, useQuery désactivé / Après : dashboard complet fonctionnel, npm run typecheck → 0 erreur
+
 ## [B3] 2026-05-26 — Implémentation GET /api/stats
 - `CodeBase/backend/main.py` : endpoint /api/stats implémenté
 - Retourne top_teams_wins (10 équipes, % victoires), top_teams_goals (10 équipes, moy. buts) et metrics.accuracy
