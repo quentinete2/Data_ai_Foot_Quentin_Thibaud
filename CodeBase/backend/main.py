@@ -32,7 +32,7 @@ except Exception as exc:
     bundle = None
 
 RESULT_LABELS = {0: "home_win", 1: "draw", 2: "away_win"}
-MODEL_METRICS = {"accuracy": 0.6320}
+MODEL_METRICS = {"accuracy": 0.6520}
 MIN_MATCHES = 5
 
 

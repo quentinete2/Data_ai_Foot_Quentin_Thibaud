@@ -10,10 +10,18 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
 
-# Équipes historiques fusionnées avec leur successeur moderne
+# Équipes historiques fusionnées avec leur successeur FIFA direct
 TEAM_NAME_MAPPING = {
     "West Germany": "Germany",
+    "East Germany": "Germany",
+    "Soviet Union": "Russia",
+    "Serbia and Montenegro": "Serbia",
 }
+
+# Équipes trop éclatées pour un mapping propre : exclues du bundle final.
+# Leurs matchs restent dans df_matches pour entraîner le modèle, mais elles
+# n'apparaîtront pas dans les stats ni dans les prédictions.
+DEFUNCT_TEAMS = {"Yugoslavia", "Czechoslovakia", "Zaire", "Dutch East Indies"}
 
 def normalize_team_name(name: str) -> str:
     return TEAM_NAME_MAPPING.get(name, name)
@@ -84,7 +92,11 @@ away_stats = create_team_features(
     df_matches[df_matches['away_team_score'].notna()],
     'away_team_name', 'away_team_score', win_result=2
 )
-print(f"✓ {len(home_stats)} équipes analysées")
+# Retirer les équipes défuntes du bundle : elles ont servi à l'entraînement
+# via df_matches mais ne doivent pas apparaître dans les stats ni prédictions.
+home_stats = {k: v for k, v in home_stats.items() if k not in DEFUNCT_TEAMS}
+away_stats = {k: v for k, v in away_stats.items() if k not in DEFUNCT_TEAMS}
+print(f"✓ {len(home_stats)} équipes dans le bundle (défuntes exclues)")
 
 # 4. Dataset features
 df_model = df_matches[['home_team_name', 'away_team_name', 'home_team_score',
