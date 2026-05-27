@@ -6,6 +6,28 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 FIFA World Cup 2026 prediction dashboard — a B3 course project. An ML model trained on historical World Cup data (1930–2022) is served via a FastAPI backend and consumed by a React frontend. The notebook trains and exports `model.pkl`; the app loads it, never retrains it.
 
+## Stack
+
+**Frontend:** Vite + React 18 + TypeScript + React Query + Tailwind CSS + Recharts  
+**Backend:** FastAPI + joblib (model loading) + RandomForestClassifier  
+**Data:** Jupyter Notebook (ETL) → `model.pkl` → backend  
+**Deployment:** Docker + docker-compose (nginx frontend + FastAPI backend)
+
+## Quick Commands
+
+```bash
+# Frontend (from CodeBase/frontend/)
+npm install && npm run dev       # Start dev server (http://localhost:5173)
+npm run typecheck               # Type-check only
+npm run build                   # Production build (dist/)
+
+# Backend (from CodeBase/backend/)
+python main.py                  # Start server (http://localhost:8000)
+
+# Docker (from CodeBase/)
+docker-compose up --build       # Deploy both services
+```
+
 ## Repository Layout
 
 ```
