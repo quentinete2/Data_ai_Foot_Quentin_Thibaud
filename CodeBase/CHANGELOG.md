@@ -11,6 +11,22 @@ Format par entrée :
 
 <!-- Les agents ajoutent leurs entrées ici, la plus récente en haut -->
 
+## [Phase2.4] 2026-05-27 — API FastAPI minimale : /api/health + /api/predict + /api/stats ✅
+- `CodeBase/etl/export_bundle.py` : script pour créer le bundle complet (modèle + stats d'équipes)
+  - Charge modèle tuned de training_phase2_2.py
+  - Calcule stats par équipe (home_stats, away_stats)
+  - Exporte bundle vers backend/model.pkl (1.1 MB)
+- `CodeBase/backend/main.py` : API complète (déjà implémentée Phase B1-B3)
+  - ✅ `/api/health` : {status: "ok", model_loaded: true}
+  - ✅ `/api/predict` : POST avec {home_team, away_team} → prédiction + probabilities + stats
+  - ✅ `/api/stats` : GET → top_teams_wins, top_teams_goals, metrics.accuracy (0.648)
+- ✅ Tests validés :
+  - Bundle charge correctement au démarrage
+  - /api/health répond immédiatement
+  - /api/predict retourne prédictions avec confidence (ex: Germany 70.83%)
+  - /api/stats retourne top teams et accuracy (64.8%)
+- Stack vérifié : FastAPI + Pydantic + joblib + scikit-learn + CORS
+
 ## [Phase2.3] 2026-05-27 — Export du modèle et pinning des versions
 - `CodeBase/backend/model.pkl` : modèle RandomForest (après tuning) exporté via joblib (1.1 MB, pas de git-lfs requis)
 - `CodeBase/backend/requirements.txt` : versions pinnées pour compatibilité model.pkl
