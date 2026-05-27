@@ -5,7 +5,7 @@ import numpy as np
 import joblib
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 app = FastAPI(title="Dashboard B3 -- API")
 
@@ -17,11 +17,19 @@ app.add_middleware(
 )
 
 # Chargement du bundle une seule fois au demarrage
+REQUIRED_BUNDLE_KEYS = {"model", "home_stats", "away_stats", "median_year", "median_count_teams"}
+
 bundle = None
 try:
     bundle = joblib.load(Path(__file__).parent / "model.pkl")
+    missing = REQUIRED_BUNDLE_KEYS - set(bundle.keys())
+    if missing:
+        raise KeyError(f"Clés manquantes dans model.pkl : {missing}")
 except FileNotFoundError:
     pass
+except Exception as exc:
+    print(f"[WARN] bundle invalide : {exc}")
+    bundle = None
 
 RESULT_LABELS = {0: "home_win", 1: "draw", 2: "away_win"}
 MODEL_METRICS = {"accuracy": 0.6480}
@@ -33,6 +41,14 @@ MIN_MATCHES = 5
 class MatchInput(BaseModel):
     home_team: str
     away_team: str
+
+    @field_validator("home_team", "away_team", mode="before")
+    @classmethod
+    def strip_and_reject_empty(cls, v: str) -> str:
+        v = v.strip()
+        if not v:
+            raise ValueError("Le nom de l'équipe ne peut pas être vide")
+        return v
 
 
 # --- Helpers ---
@@ -76,8 +92,14 @@ def predict(match: MatchInput):
         median_count_teams,
     ]])
 
-    prediction_class = int(model.predict(features)[0])
-    probabilities = model.predict_proba(features)[0]
+    try:
+        prediction_class = int(model.predict(features)[0])
+        probabilities = model.predict_proba(features)[0]
+    except Exception as exc:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Erreur lors de la prédiction : {exc}",
+        )
 
     label = (
         f"Victoire {match.home_team}" if prediction_class == 0

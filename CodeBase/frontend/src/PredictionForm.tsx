@@ -5,14 +5,26 @@ import type { MatchInput } from './api'
 
 const INITIAL: MatchInput = { home_team: 'France', away_team: 'Brazil' }
 
+type FieldErrors = { home_team?: string; away_team?: string }
+
 export default function PredictionForm() {
   const [valeurs, setValeurs] = useState<MatchInput>(INITIAL)
+  const [errors, setErrors] = useState<FieldErrors>({})
 
   const mutation = useMutation({ mutationFn: predire })
 
   function onSubmit(e: React.FormEvent) {
     e.preventDefault()
-    mutation.mutate(valeurs)
+    const trimmed: MatchInput = {
+      home_team: valeurs.home_team.trim(),
+      away_team: valeurs.away_team.trim(),
+    }
+    const newErrors: FieldErrors = {}
+    if (!trimmed.home_team) newErrors.home_team = "Le nom de l'équipe à domicile est requis"
+    if (!trimmed.away_team) newErrors.away_team = "Le nom de l'équipe à l'extérieur est requis"
+    setErrors(newErrors)
+    if (Object.keys(newErrors).length > 0) return
+    mutation.mutate(trimmed)
   }
 
   return (
@@ -25,11 +37,16 @@ export default function PredictionForm() {
           id="home_team"
           type="text"
           value={valeurs.home_team}
-          onChange={(e) => setValeurs((prev) => ({ ...prev, home_team: e.target.value }))}
+          onChange={(e) => {
+            setValeurs((prev) => ({ ...prev, home_team: e.target.value }))
+            setErrors((prev) => ({ ...prev, home_team: undefined }))
+          }}
           placeholder="ex: France"
           className="rounded border px-2 py-1 text-sm"
-          required
         />
+        {errors.home_team && (
+          <p className="text-red-500 text-xs">{errors.home_team}</p>
+        )}
       </div>
 
       <div className="flex flex-col gap-1">
@@ -40,11 +57,16 @@ export default function PredictionForm() {
           id="away_team"
           type="text"
           value={valeurs.away_team}
-          onChange={(e) => setValeurs((prev) => ({ ...prev, away_team: e.target.value }))}
+          onChange={(e) => {
+            setValeurs((prev) => ({ ...prev, away_team: e.target.value }))
+            setErrors((prev) => ({ ...prev, away_team: undefined }))
+          }}
           placeholder="ex: Brazil"
           className="rounded border px-2 py-1 text-sm"
-          required
         />
+        {errors.away_team && (
+          <p className="text-red-500 text-xs">{errors.away_team}</p>
+        )}
       </div>
 
       <button

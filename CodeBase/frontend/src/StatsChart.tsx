@@ -4,6 +4,10 @@ import type { StatItem } from './api'
 type Props = { data: StatItem[] }
 
 export default function StatsChart({ data }: Props) {
+  if (!data || data.length === 0) {
+    return <p className="text-gray-400 text-sm py-4">Aucune donnée disponible.</p>
+  }
+
   return (
     <ResponsiveContainer width="100%" height={300}>
       <BarChart data={data} margin={{ top: 4, right: 16, bottom: 40, left: 0 }}>
