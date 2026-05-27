@@ -1,0 +1,60 @@
+name: CI — Tests + Sync HF Spaces
+
+on:
+  push:
+    branches: [master]
+
+jobs:
+  test:
+    name: Tests backend (pytest)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Installer les dépendances
+        run: pip install -r CodeBase/backend/requirements.txt
+
+      - name: Exécuter les tests
+        run: pytest CodeBase/backend/tests/ -v
+
+  deploy-backend:
+    name: Sync backend → thim1n/wc2026-backend
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Installer huggingface_hub
+        run: pip install huggingface_hub
+
+      - name: Sync CodeBase/backend vers HF Spaces
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: python scripts/sync_hf_backend.py
+
+  deploy-frontend:
+    name: Sync frontend → thim1n/wc2026-frontend
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Installer huggingface_hub
+        run: pip install huggingface_hub
+
+      - name: Sync CodeBase/frontend vers HF Spaces
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: python scripts/sync_hf_frontend.py

@@ -11,6 +11,16 @@ Format par entrée :
 
 <!-- Les agents ajoutent leurs entrées ici, la plus récente en haut -->
 
+## [CI/CD] 2026-05-27 — GitHub Actions : Tests + Déploiement automatique HF Spaces
+- `.github/workflows/sync-to-hf.yml` : workflow CI/CD sur push master
+  - Job `test` : pytest CodeBase/backend/tests/ (40+ tests)
+  - Job `deploy-backend` : upload_folder → thim1n/wc2026-backend (conditionnel à tests verts)
+  - Job `deploy-frontend` : upload_folder → thim1n/wc2026-frontend (conditionnel à tests verts)
+- `scripts/sync_hf_backend.py` + `scripts/sync_hf_frontend.py` : scripts de sync huggingface_hub
+- `CodeBase/frontend/Dockerfile` : ajout `ARG VITE_API_URL` avec fallback URL HF backend
+- `CodeBase/frontend/README.md` : config HF Spaces (`sdk: docker`)
+- Secret GitHub requis : `HF_TOKEN` (write token thim1n) dans les secrets du repo
+
 ## [README] 2026-05-27 — Réécriture README projet
 - `CodeBase/README.md` : remplace le template "Squelette à compléter" par README projet complet
 - Diagramme mermaid pipeline data (CSV → ETL → model.pkl → FastAPI → React → Utilisateur)
