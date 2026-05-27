@@ -13,7 +13,8 @@
 | **Nom de colonne** | `result` |
 | **Type** | Catégorique (multiclasse : 3 classes) |
 | **Classes** | `0` = home win, `1` = draw, `2` = away win |
-| **Distribution** | légèrement déséquilibrée (36% / 24% / 40%) |
+| **Distribution** | **GRAVE déséquilibre** (56.33% / 16.83% / 26.84%) |
+| **Ratio max/min** | 3.35 (> 25% = problématique) |
 
 ---
 
@@ -77,24 +78,44 @@ Toutes les features sont **agrégées par équipe** à partir de l'historique an
 | **F1-score** | 0.63 (macro) | Important car 3 classes, déséquilibre modéré |
 | **Precision/Recall** | ~0.62 / ~0.65 (par classe) | Pas plus d'importance que accuracy ici |
 
-### Pourquoi accuracy d'abord ?
+### Pourquoi accuracy doit être complétée ?
 
-1. **Business clarity** : « le modèle prédit correctement 64.8% des résultats » = message simple
-2. **Déséquilibre tolérable** : pas grave (36% / 24% / 40%), accuracy = bon proxy
-3. **Utilité** : en prédiction sportive, se tromper sur home/draw/away a la même gravité
-4. **Baseline** : prédir always home win = 36% accuracy → 64.8% = gain +78%
+1. **Déséquilibre GRAVE détecté** : 56.33% / 16.83% / 26.84% (ratio 3.35)
+   - L'accuracy seule est biaisée vers la classe majoritaire (Home Win)
+   - Un modèle qui prédit "toujours Home Win" obtient 56% de baseline
+   
+2. **Metrics recommandées** :
+   - **Primaire** : Accuracy (baseline 56% → objectif ≥ 65%)
+   - **Secondaire** : **F1-score (macro)** — pénalise favoritisme classes minoritaires
+   - **Tertaire** : Precision/Recall par classe (évaluer bias)
+
+3. **Mitigation requise** :
+   - `class_weight='balanced'` dans RandomForestClassifier
+   - OU SMOTE (synthetic oversampling) en preprocessing
+
+4. **Utilité** : En prédiction sportive, se tromper sur tout est grave
+   - Faux négatif sur "Away Win" = mauvaise info au parieur
+   - Modèle doit être équitable entre 3 classes
 
 ---
 
-## Résumé exécutif
+## 🔧 Résumé Exécutif Révisé (EDA Validé)
 
 ```
 Je prédis l'issue d'un match de Coupe du Monde (home win / draw / away win)
 à partir de 9 features (avg goals, total matches, wins, year, count_teams).
 
-Famille ML  : Classification multiclasse (RandomForest)
-Métrique    : Accuracy 64.80% (F1 0.63 macro)
-Baseline    : 36% (toujours prédire home win)
-Lift        : +78% par rapport à baseline
+Famille ML              : Classification multiclasse (RandomForest)
+Cible (y)              : result ∈ {0, 1, 2}
+Distribution cible     : 56.33% / 16.83% / 26.84% [GRAVE DÉSÉQUILIBRE]
+Features (X)           : 9 features avec corrélations 0.014–0.444
+Metrics               : Accuracy + F1-score (macro) + Precision/Recall
+Class balancing       : class_weight='balanced' REQUIS
+Baseline              : 56.33% (toujours prédire home win)
+Objectif              : ≥ 65% accuracy + F1 ≥ 0.50 (macro)
+Lift attendu          : ~+16% vs baseline
+
+⚠️ NOTE : L'EDA approfondie (étape 2.1) a révélé un déséquilibre bien
+plus grave que prévu. Voir Ressources/3.plan/02_eda_approfondie.md pour details.
 ```
 
