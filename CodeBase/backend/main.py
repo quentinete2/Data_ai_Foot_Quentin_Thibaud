@@ -11,7 +11,12 @@ app = FastAPI(title="Dashboard B3 -- API")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost"],
+    allow_origins=[
+        "http://localhost:5173",
+        "http://localhost",
+        "https://*.hf.space",
+    ],
+    allow_origin_regex=r"https://.*\.hf\.space",
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -182,4 +187,4 @@ def stats():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("main:app", host="0.0.0.0", port=7860, reload=False)

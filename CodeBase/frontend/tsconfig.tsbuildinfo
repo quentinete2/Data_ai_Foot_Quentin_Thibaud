@@ -1,0 +1,1 @@
+{"root":["./src/app.tsx","./src/predictionform.tsx","./src/statschart.tsx","./src/api.ts","./src/main.tsx","./src/setuptests.ts","./src/vite-env.d.ts","./src/__tests__/predictionform.test.tsx","./src/__tests__/statschart.test.tsx","./src/__tests__/api.test.ts","./src/lib/utils.ts"],"version":"5.9.3"}
