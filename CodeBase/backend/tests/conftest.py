@@ -13,14 +13,14 @@ def mock_bundle():
     model.predict_proba.return_value = np.array([[0.60, 0.25, 0.15]])
 
     home_stats = {
-        "France":  {"avg_goals": 2.1, "total_matches": 80, "wins": 55},
-        "Brazil":  {"avg_goals": 2.3, "total_matches": 90, "wins": 60},
-        "Germany": {"avg_goals": 1.9, "total_matches": 75, "wins": 45},
+        "France":  {"avg_goals": 2.1, "total_matches": 80, "wins": 55, "weighted_win_rate": 0.65, "last_wc_year": 2022},
+        "Brazil":  {"avg_goals": 2.3, "total_matches": 90, "wins": 60, "weighted_win_rate": 0.70, "last_wc_year": 2022},
+        "Germany": {"avg_goals": 1.9, "total_matches": 75, "wins": 45, "weighted_win_rate": 0.58, "last_wc_year": 2014},
     }
     away_stats = {
-        "France":  {"avg_goals": 1.8, "total_matches": 80, "wins": 40},
-        "Brazil":  {"avg_goals": 2.0, "total_matches": 90, "wins": 50},
-        "Germany": {"avg_goals": 1.7, "total_matches": 75, "wins": 35},
+        "France":  {"avg_goals": 1.8, "total_matches": 80, "wins": 40, "weighted_win_rate": 0.48, "last_wc_year": 2022},
+        "Brazil":  {"avg_goals": 2.0, "total_matches": 90, "wins": 50, "weighted_win_rate": 0.55, "last_wc_year": 2022},
+        "Germany": {"avg_goals": 1.7, "total_matches": 75, "wins": 35, "weighted_win_rate": 0.44, "last_wc_year": 2014},
     }
 
     return {

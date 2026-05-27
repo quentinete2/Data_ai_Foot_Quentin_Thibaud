@@ -11,6 +11,16 @@ Format par entrée :
 
 <!-- Les agents ajoutent leurs entrées ici, la plus récente en haut -->
 
+## [TESTS] 2026-05-27 — Mise à jour TU : 35 → 38 tests, 0 failure
+- `CodeBase/backend/tests/conftest.py` : ajout de `weighted_win_rate` et `last_wc_year` dans les stats du mock_bundle (champs ajoutés lors de l'évolution B1→Phase2)
+  - Avant : KeyError 'weighted_win_rate' sur tous les tests /api/predict et /api/stats → 16 failures
+  - Après : mock aligné sur le contrat réel de main.py → 38 passed
+- `CodeBase/backend/tests/test_main.py` :
+  - `test_stats_has_required_keys` : ajout du champ `form_scores` (endpoint B3 étendu)
+  - `test_stats_without_bundle_returns_empty_lists` : ajout assertion `form_scores == []`
+  - 3 nouveaux tests `form_scores` : max 15, trié desc, items label+value
+  - `TestGetTeamStats` : assertions corrigées pour refléter le dict à 5 clés (weighted_win_rate, last_wc_year)
+
 ## [CI/CD] 2026-05-27 — GitHub Actions : Tests + Déploiement automatique HF Spaces
 - `.github/workflows/sync-to-hf.yml` : workflow CI/CD sur push master
   - Job `test` : pytest CodeBase/backend/tests/ (40+ tests)

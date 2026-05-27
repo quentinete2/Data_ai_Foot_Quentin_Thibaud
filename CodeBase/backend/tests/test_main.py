@@ -153,6 +153,7 @@ class TestStats:
         data = client.get("/api/stats").json()
         assert "top_teams_wins" in data
         assert "top_teams_goals" in data
+        assert "form_scores" in data
         assert "metrics" in data
 
     def test_stats_metrics_has_accuracy_float(self, client):
@@ -170,6 +171,7 @@ class TestStats:
         data = client_no_bundle.get("/api/stats").json()
         assert data["top_teams_wins"] == []
         assert data["top_teams_goals"] == []
+        assert data["form_scores"] == []
 
     def test_stats_items_have_label_and_value(self, client):
         items = client.get("/api/stats").json()["top_teams_wins"]
@@ -182,21 +184,39 @@ class TestStats:
         values = [i["value"] for i in items]
         assert values == sorted(values, reverse=True)
 
+    def test_stats_form_scores_max_15(self, client):
+        assert len(client.get("/api/stats").json()["form_scores"]) <= 15
+
+    def test_stats_form_scores_sorted_descending(self, client):
+        items = client.get("/api/stats").json()["form_scores"]
+        values = [i["value"] for i in items]
+        assert values == sorted(values, reverse=True)
+
+    def test_stats_form_scores_items_have_label_and_value(self, client):
+        items = client.get("/api/stats").json()["form_scores"]
+        if items:
+            assert "label" in items[0]
+            assert "value" in items[0]
+
 
 # ─── get_team_stats helper ────────────────────────────────────────────────────
 
 class TestGetTeamStats:
     def test_known_team_returns_correct_stats(self):
-        stats = {"France": {"avg_goals": 2.1, "total_matches": 80, "wins": 55}}
+        stats = {"France": {"avg_goals": 2.1, "total_matches": 80, "wins": 55, "weighted_win_rate": 0.65, "last_wc_year": 2022}}
         result = get_team_stats(stats, "France")
         assert result["avg_goals"] == 2.1
         assert result["total_matches"] == 80
         assert result["wins"] == 55
+        assert result["weighted_win_rate"] == 0.65
 
     def test_unknown_team_returns_zeros(self):
-        stats = {"France": {"avg_goals": 2.1, "total_matches": 80, "wins": 55}}
-        result = get_team_stats(stats, "Narnia")
-        assert result == {"avg_goals": 0, "total_matches": 0, "wins": 0}
+        result = get_team_stats({}, "Narnia")
+        assert result["avg_goals"] == 0
+        assert result["total_matches"] == 0
+        assert result["wins"] == 0
+        assert result["weighted_win_rate"] == 0
+        assert result["last_wc_year"] == 0
 
     def test_empty_stats_dict_returns_zeros(self):
         result = get_team_stats({}, "France")
