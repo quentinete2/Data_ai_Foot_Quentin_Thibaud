@@ -1,0 +1,11 @@
+node_modules/
+.env
+.env.local
+.env.production
+.venv/
+__pycache__/
+*.pkl
+dist/
+.playwright-mcp/
+*.pyc
+.DS_Store
