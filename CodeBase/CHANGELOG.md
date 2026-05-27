@@ -11,6 +11,23 @@ Format par entrée :
 
 <!-- Les agents ajoutent leurs entrées ici, la plus récente en haut -->
 
+## [Phase2.2] 2026-05-27 — Baseline → Comparaison → Tuning : RandomForest wins (65.20% accuracy)
+- `CodeBase/etl/training_phase2_2.py` : script complet implémentant 10 phases
+  - Phase 1: Chargement 1248 matches
+  - Phase 2: Feature engineering (9 features)
+  - Phase 3: Train/Test split 80/20 stratifié (train: 998, test: 250)
+  - Phase 4-6: Baseline LogisticRegression (CV 57.52% acc / 58.80% test) vs RandomForest (CV 60.82% acc / 64.00% test) vs GradientBoosting (CV 59.52% acc / 62.80% test)
+  - Phase 7: GridSearchCV tuning RandomForest (36 combinaisons, 180 fits)
+  - Phase 8: Évaluation finale test set : 65.20% accuracy, 0.5417 F1-score (macro)
+  - Phase 9: Tableau récapitulatif comparatif
+  - Phase 10: Export model_final.pkl
+- Hyperparamètres finaux : n_estimators=100, max_depth=8, min_samples_split=10, class_weight='balanced'
+- Amélioration vs Baseline : +6.40% accuracy (+10.9% relatif), +3.1% F1-score
+- Confusion matrix: Home 77% recall, Draw 19% recall, Away 70% recall
+- Avant : LR 58.80% / Après : RF-tuned 65.20%
+- Issues détectées : Draw prédiction faible (minoritaire 16%) → recommandation SMOTE future
+- `Ressources/3.plan/03_training_phase2_2.md` : rapport détaillé avec findings et next steps
+
 ## [D1] 2026-05-26 — Déploiement Docker (backend + frontend + compose)
 - `CodeBase/backend/Dockerfile` : image python:3.11-slim, installe requirements, expose 8000
 - `CodeBase/backend/.dockerignore` : exclut __pycache__, .venv, node_modules
