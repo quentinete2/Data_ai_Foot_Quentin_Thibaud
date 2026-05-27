@@ -1,79 +1,79 @@
-# FIFA World Cup 2026 Prediction Dashboard
+# Tableau de Bord de Prédiction FIFA Coupe du Monde 2026
 
-> **Predict match outcomes** using historical World Cup data and machine learning. A fullstack application combining React frontend, FastAPI backend, and a pre-trained RandomForest model.
-
----
-
-## 📋 Project Overview
-
-**What**: A web dashboard that predicts the outcome of FIFA World Cup matches (home win / draw / away win) using 92 years of historical data (1930–2022, 1248 matches).
-
-**For whom**: Football enthusiasts, analysts, and educators exploring ML-driven predictions in sports.
-
-**Dataset**: FIFA World Cup historical data
-  - **Source**: GitHub (publicly available)
-  - **Size**: 1248 matches × 10 features
-  - **Period**: 1930–2022 (24 tournaments)
-  - **Classes**: 3 (home win: 36%, draw: 24%, away win: 40%)
-
-**ML Task**: Multiclass classification (RandomForestClassifier, 100 trees)  
-**Accuracy**: 64.80% on test set (baseline: 36% → **+78% lift**)
+> **Prédisez les résultats des matchs** à partir de données historiques de la Coupe du Monde et du machine learning. Une application fullstack combinant un frontend React, un backend FastAPI et un modèle RandomForest pré-entraîné.
 
 ---
 
-## 🛠️ Stack
+## Présentation du projet
+
+**Quoi** : Un tableau de bord web qui prédit l'issue des matchs de la Coupe du Monde FIFA (victoire à domicile / match nul / victoire à l'extérieur) à partir de 92 ans de données historiques (1930–2022, 1248 matchs).
+
+**Pour qui** : Les passionnés de football, les analystes et les enseignants souhaitant explorer les prédictions sportives par le machine learning.
+
+**Jeu de données** : Données historiques de la Coupe du Monde FIFA
+  - **Source** : GitHub (disponible publiquement)
+  - **Taille** : 1248 matchs × 10 caractéristiques
+  - **Période** : 1930–2022 (24 tournois)
+  - **Classes** : 3 (victoire à domicile : 36 %, match nul : 24 %, victoire à l'extérieur : 40 %)
+
+**Tâche ML** : Classification multiclasse (RandomForestClassifier, 100 arbres)  
+**Précision** : 64,80 % sur le jeu de test (référence : 36 % → **+78 % de gain**)
+
+---
+
+## Stack technique
 
 ### Frontend
-- **Vite** — ultra-fast build tool
-- **React 18** — UI framework
-- **TypeScript** — type safety
-- **TanStack React Query** — server data management (caching, retries, loading states)
-- **Tailwind CSS** — utility-first styling
-- **Recharts** — interactive charts
-- **shadcn/ui** — accessible component library
+- **Vite** — outil de build ultra-rapide
+- **React 18** — framework UI
+- **TypeScript** — typage statique
+- **TanStack React Query** — gestion des données serveur (cache, retry, états de chargement)
+- **Tailwind CSS** — styles utilitaires
+- **Recharts** — graphiques interactifs
+- **shadcn/ui** — bibliothèque de composants accessibles
 
 ### Backend
-- **FastAPI** — modern Python API framework (automatic OpenAPI docs)
-- **joblib** — model serialization (loads `model.pkl` at startup)
-- **RandomForestClassifier** — pre-trained model (from scikit-learn)
-- **Pydantic** — request/response validation
+- **FastAPI** — framework Python moderne (documentation OpenAPI automatique)
+- **joblib** — sérialisation du modèle (charge `model.pkl` au démarrage)
+- **RandomForestClassifier** — modèle pré-entraîné (scikit-learn)
+- **Pydantic** — validation des requêtes et réponses
 
-### Deployment
-- **Docker** — containerization
+### Déploiement
+- **Docker** — conteneurisation
 - **docker-compose** — orchestration (frontend + backend + nginx)
 
-### Data Pipeline
-- **Jupyter Notebook** (`CodeBase/etl/Data_ia_foot.ipynb`) — ETL + training
-- **Python scikit-learn** — model training and evaluation
+### Pipeline de données
+- **Jupyter Notebook** (`CodeBase/etl/Data_ia_foot.ipynb`) — ETL + entraînement
+- **Python scikit-learn** — entraînement et évaluation du modèle
 
 ---
 
-## 🚀 Getting Started
+## Démarrage rapide
 
-### Prerequisites
+### Prérequis
 - **Python** 3.10+
 - **Node.js** 18+ (npm)
-- **model.pkl** in `CodeBase/backend/` (generated from ETL notebook)
+- **model.pkl** dans `CodeBase/backend/` (généré depuis le notebook ETL)
 
 ### Backend (Terminal 1)
 
 ```bash
 cd CodeBase/backend
 
-# Create virtual environment
+# Créer l'environnement virtuel
 python -m venv .venv
-source .venv/bin/activate  # Windows: .venv\Scripts\activate
+source .venv/bin/activate  # Windows : .venv\Scripts\activate
 
-# Install dependencies
+# Installer les dépendances
 pip install -r requirements.txt
 
-# Ensure model.pkl is present
-# (Generate from ETL notebook: joblib.dump(bundle, "model.pkl"))
+# Vérifier que model.pkl est présent
+# (Générer depuis le notebook ETL : joblib.dump(bundle, "model.pkl"))
 
-# Start server
+# Démarrer le serveur
 python main.py
-# API running at http://localhost:8000
-# Docs at http://localhost:8000/docs
+# API disponible sur http://localhost:8000
+# Documentation sur http://localhost:8000/docs
 ```
 
 ### Frontend (Terminal 2)
@@ -81,22 +81,22 @@ python main.py
 ```bash
 cd CodeBase/frontend
 
-# Install dependencies
+# Installer les dépendances
 npm install
 
-# Start dev server
+# Démarrer le serveur de développement
 npm run dev
-# App running at http://localhost:5173
+# Application disponible sur http://localhost:5173
 ```
 
-### Health Check
+### Vérification
 
 ```bash
-# Backend health
+# Santé du backend
 curl http://localhost:8000/api/health
-# Expected: {"status":"ok","model_loaded":true}
+# Attendu : {"status":"ok","model_loaded":true}
 
-# Make a prediction
+# Effectuer une prédiction
 curl -X POST http://localhost:8000/api/predict \
   -H "Content-Type: application/json" \
   -d '{"home_team":"France","away_team":"Mexico"}'
@@ -104,169 +104,169 @@ curl -X POST http://localhost:8000/api/predict \
 
 ---
 
-## 📚 Documentation
+## Documentation
 
-Detailed documentation is in the `docs/` folder:
+La documentation détaillée se trouve dans le dossier `docs/` :
 
-| File | Content |
-|------|---------|
-| [docs/architecture.md](docs/architecture.md) | System design, component interactions, technology choices |
-| [docs/dataset.md](docs/dataset.md) | Data description, distributions, quality, biases |
-| [docs/question-predictive.md](docs/question-predictive.md) | ML problem definition, features, metrics, justification |
-| [docs/user-journey.md](docs/user-journey.md) | User experience flow, UI/UX insights, satisfaction metrics |
-| [docs/diagramme-sequence.md](docs/diagramme-sequence.md) | Technical sequence: frontend → backend → model → response |
+| Fichier | Contenu |
+|---------|---------|
+| [docs/architecture.md](docs/architecture.md) | Conception du système, interactions entre composants, choix technologiques |
+| [docs/dataset.md](docs/dataset.md) | Description des données, distributions, qualité, biais |
+| [docs/question-predictive.md](docs/question-predictive.md) | Définition du problème ML, features, métriques, justification |
+| [docs/user-journey.md](docs/user-journey.md) | Parcours utilisateur, insights UI/UX, métriques de satisfaction |
+| [docs/diagramme-sequence.md](docs/diagramme-sequence.md) | Séquence technique : frontend → backend → modèle → réponse |
 
 ---
 
-## 📦 Project Structure
+## Structure du projet
 
 ```
 CodeBase/
 ├── backend/
-│   ├── main.py              # FastAPI app (endpoints: /api/health, /api/predict, /api/stats)
-│   ├── requirements.txt      # Python dependencies
-│   ├── model.pkl            # Pre-trained RandomForest (joblib)
-│   └── Dockerfile           # Container build
+│   ├── main.py              # Application FastAPI (endpoints : /api/health, /api/predict, /api/stats)
+│   ├── requirements.txt      # Dépendances Python
+│   ├── model.pkl            # RandomForest pré-entraîné (joblib)
+│   └── Dockerfile           # Build du conteneur
 ├── frontend/
 │   ├── src/
-│   │   ├── App.tsx          # Main dashboard component
-│   │   ├── PredictionForm.tsx # Form to enter teams
-│   │   ├── StatsChart.tsx    # Statistics visualization
-│   │   ├── api.ts           # Centralized API calls (React Query)
-│   │   └── index.css        # Global styles
+│   │   ├── App.tsx          # Composant principal du tableau de bord
+│   │   ├── PredictionForm.tsx # Formulaire de saisie des équipes
+│   │   ├── StatsChart.tsx    # Visualisation des statistiques
+│   │   ├── api.ts           # Appels API centralisés (React Query)
+│   │   └── index.css        # Styles globaux
 │   ├── package.json
 │   ├── vite.config.ts
 │   ├── tailwind.config.js
 │   └── Dockerfile
 ├── etl/
-│   ├── Data_ia_foot.ipynb   # Training notebook (ETL + RandomForest)
-│   └── generate_model.py    # Helper to export model.pkl
-└── docker-compose.yml       # Multi-container orchestration
+│   ├── Data_ia_foot.ipynb   # Notebook d'entraînement (ETL + RandomForest)
+│   └── generate_model.py    # Script d'export de model.pkl
+└── docker-compose.yml       # Orchestration multi-conteneurs
 ```
 
 ---
 
-## 🎯 Key Features
+## Fonctionnalités clés
 
-✅ **Real-time Predictions** — Enter 2 teams, get instant result + probabilities  
-✅ **Historical Statistics** — View team performance metrics and trends  
-✅ **Model Transparency** — Accuracy metrics, feature importance, why this prediction  
-✅ **Responsive Design** — Works on desktop and tablet  
-✅ **Type-Safe** — Full TypeScript frontend + Pydantic validation backend  
+- **Prédictions en temps réel** — Entrez 2 équipes, obtenez instantanément un résultat + les probabilités
+- **Statistiques historiques** — Consultez les métriques de performance des équipes et les tendances
+- **Transparence du modèle** — Métriques de précision, importance des features, explication de la prédiction
+- **Design responsive** — Compatible bureau et tablette
+- **Typage complet** — Frontend TypeScript + validation Pydantic côté backend
 
 ---
 
-## 🐳 Docker Deployment
+## Déploiement Docker
 
 ```bash
 cd CodeBase
 
-# Build and run
+# Construire et démarrer
 docker-compose up --build
 
-# Access
-# Frontend: http://localhost:80 (nginx)
-# Backend: http://localhost:8000
-# Docs: http://localhost:8000/docs
+# Accès
+# Frontend : http://localhost:80 (nginx)
+# Backend : http://localhost:8000
+# Documentation : http://localhost:8000/docs
 ```
 
 ---
 
-## 📊 Model Details
+## Détails du modèle
 
-| Metric | Value |
-|--------|-------|
-| Algorithm | RandomForestClassifier (100 trees, max_depth=10) |
-| Train/Test Split | 80% / 20% (998 / 250 samples) |
+| Métrique | Valeur |
+|----------|--------|
+| Algorithme | RandomForestClassifier (100 arbres, max_depth=10) |
+| Découpage train/test | 80 % / 20 % (998 / 250 échantillons) |
 | Features | 9 (home_avg_goals, away_avg_goals, goal_diff, home_total_matches, away_total_matches, home_wins, away_wins, year, count_teams) |
-| Classes | 3 (home win, draw, away win) |
-| **Accuracy** | **64.80%** |
-| F1-Score (macro) | 0.63 |
-| Baseline | 36% (always predict home win) |
+| Classes | 3 (victoire domicile, match nul, victoire extérieur) |
+| **Précision** | **64,80 %** |
+| F1-Score (macro) | 0,63 |
+| Référence | 36 % (toujours prédire victoire à domicile) |
 
 ---
 
-## 🛠️ Development Commands
+## Commandes de développement
 
 ### Frontend
 ```bash
 cd CodeBase/frontend
 
-npm run dev         # Start dev server
-npm run build       # Production build (dist/)
-npm run typecheck   # TypeScript type checking
-npm run preview     # Preview production build
+npm run dev         # Démarrer le serveur de développement
+npm run build       # Build de production (dist/)
+npm run typecheck   # Vérification des types TypeScript
+npm run preview     # Prévisualiser le build de production
 ```
 
 ### Backend
 ```bash
 cd CodeBase/backend
 
-python main.py                      # Start server
-python -m pytest tests/ -v          # Run tests (if any)
+python main.py                      # Démarrer le serveur
+python -m pytest tests/ -v          # Lancer les tests (si présents)
 ```
 
-### Type Checking
+### Vérification des types
 ```bash
 cd CodeBase/frontend
-npm run typecheck    # Zero TypeScript errors required
+npm run typecheck    # Zéro erreur TypeScript requise
 ```
 
 ---
 
-## ⚡ Conventions
+## Conventions
 
-See [CodeBase/CLAUDE.md](CodeBase/CLAUDE.md) for detailed guidelines.
+Voir [CodeBase/CLAUDE.md](CodeBase/CLAUDE.md) pour les directives détaillées.
 
-**Key principles**:
-- **Server data** → use React Query (`useQuery`, `useMutation`)
-- **Local state** → use `useState`
-- **No global state library** (Redux, Zustand) — unnecessary
-- **Styling** → Tailwind CSS + `cn()` helper
-- **Components** → surgical edits only, don't rewrite working files
-- **API contracts** — never change without flagging in commit
-
----
-
-## 🐛 Troubleshooting
-
-| Issue | Solution |
-|-------|----------|
-| **CORS error** | Check ports: frontend on 5173, backend on 8000. `CORSMiddleware` in `main.py` allows both. |
-| **Blank chart** | Ensure `/api/stats` returns data + `<ResponsiveContainer>` wraps Recharts |
-| **Model crash** | Verify `model.pkl` exists and bundle keys match backend code |
-| **Team not found** | Ensure team name matches database (case-sensitive) |
-| **slow response** | Profile model.predict_proba() latency or check network |
+**Principes clés** :
+- **Données serveur** → utiliser React Query (`useQuery`, `useMutation`)
+- **État local** → utiliser `useState`
+- **Pas de librairie d'état global** (Redux, Zustand) — inutile
+- **Styles** → Tailwind CSS + helper `cn()`
+- **Composants** → éditions chirurgicales uniquement, ne pas réécrire les fichiers qui fonctionnent
+- **Contrats API** — ne jamais modifier sans le signaler dans le commit
 
 ---
 
-## 📝 Development Workflow
+## Dépannage
 
-1. **Read** the plan file for your task (`Ressources/3.plan/`)
-2. **Code** with appropriate skill (FastAPI or React)
-3. **Launch** backend + frontend
-4. **Test** via Playwright MCP (or manual)
-5. **Document** in `CodeBase/CHANGELOG.md`
-6. **Commit** with descriptive message
-
-See [CLAUDE.md](CLAUDE.md) for full workflow details.
-
----
-
-## 📄 License & Attribution
-
-Course project (B3 — Data Science École Sup'). Dataset sourced from publicly available FIFA World Cup records.
+| Problème | Solution |
+|----------|----------|
+| **Erreur CORS** | Vérifier les ports : frontend sur 5173, backend sur 8000. `CORSMiddleware` dans `main.py` autorise les deux. |
+| **Graphique vide** | Vérifier que `/api/stats` retourne des données + que `<ResponsiveContainer>` encadre Recharts |
+| **Crash du modèle** | Vérifier que `model.pkl` existe et que les clés du bundle correspondent au code backend |
+| **Équipe introuvable** | Vérifier que le nom de l'équipe correspond à la base de données (sensible à la casse) |
+| **Réponse lente** | Profiler la latence de `model.predict_proba()` ou vérifier le réseau |
 
 ---
 
-## 🚀 Next Steps
+## Workflow de développement
 
-- [ ] Complete backend endpoints (features validation, edge cases)
-- [ ] Add team autocomplete in frontend form
-- [ ] Deploy to production (Azure App Service or similar)
-- [ ] Add historical prediction tracking
-- [ ] Explore model explainability (SHAP values)
+1. **Lire** le fichier plan de la tâche (`Ressources/3.plan/`)
+2. **Coder** avec le bon skill (FastAPI ou React)
+3. **Lancer** le backend + frontend
+4. **Tester** via Playwright MCP (ou manuellement)
+5. **Documenter** dans `CodeBase/CHANGELOG.md`
+6. **Commiter** avec un message descriptif
+
+Voir [CLAUDE.md](CLAUDE.md) pour les détails complets du workflow.
 
 ---
 
-**Questions?** See [docs/](docs/) for comprehensive documentation or check [CLAUDE.md](CLAUDE.md) for development guidance.
+## Licence et attribution
+
+Projet de cours (B3 — Data Science École Sup'). Jeu de données issu des archives publiques de la FIFA Coupe du Monde.
+
+---
+
+## Prochaines étapes
+
+- [ ] Compléter les endpoints backend (validation des features, cas limites)
+- [ ] Ajouter l'autocomplétion des équipes dans le formulaire frontend
+- [ ] Déployer en production (Azure App Service ou similaire)
+- [ ] Ajouter le suivi historique des prédictions
+- [ ] Explorer l'explicabilité du modèle (valeurs SHAP)
+
+---
+
+**Questions ?** Consultez [docs/](docs/) pour la documentation complète ou [CLAUDE.md](CLAUDE.md) pour les directives de développement.
