@@ -28,6 +28,7 @@ export type StatItem = { label: string; value: number }
 export type StatsResponse = {
   top_teams_wins: StatItem[]
   top_teams_goals: StatItem[]
+  form_scores: StatItem[]
   metrics: { accuracy: number }
 }
 

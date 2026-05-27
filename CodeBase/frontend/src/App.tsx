@@ -27,10 +27,13 @@ export default function App() {
       </h1>
 
       <section className="mt-6">
-        <h2 className="text-lg font-semibold">Explorer les données</h2>
+        <h2 className="text-lg font-semibold">Score de forme — WC 2026</h2>
+        <p className="text-xs text-gray-500 mb-2">
+          Score composite : taux de victoires (50 %) + buts/match (30 %) + expérience (20 %), normalisé 0–100.
+        </p>
         {isLoading && <p className="text-gray-400 text-sm">Chargement…</p>}
         {isError && <p className="text-red-500 text-sm">Impossible de charger les stats.</p>}
-        {stats && <StatsChart data={stats.top_teams_wins} />}
+        {stats && <StatsChart data={stats.form_scores} />}
       </section>
 
       <section className="mt-6">

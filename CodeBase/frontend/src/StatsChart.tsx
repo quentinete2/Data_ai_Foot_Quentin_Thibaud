@@ -14,7 +14,7 @@ export default function StatsChart({ data }: Props) {
         <CartesianGrid strokeDasharray="3 3" />
         <XAxis dataKey="label" angle={-35} textAnchor="end" tick={{ fontSize: 11 }} />
         <YAxis unit="%" domain={[0, 100]} />
-        <Tooltip formatter={(v: number) => [`${v.toFixed(1)} %`, 'Victoires']} />
+        <Tooltip formatter={(v: number) => [`${v.toFixed(1)} / 100`, 'Score de forme']} />
         <Bar dataKey="value" fill="#1d4ed8" radius={[4, 4, 0, 0]} />
       </BarChart>
     </ResponsiveContainer>
