@@ -32,7 +32,7 @@ except Exception as exc:
     bundle = None
 
 RESULT_LABELS = {0: "home_win", 1: "draw", 2: "away_win"}
-MODEL_METRICS = {"accuracy": 0.6480}
+MODEL_METRICS = {"accuracy": 0.6320}
 MIN_MATCHES = 5
 
 
@@ -54,7 +54,7 @@ class MatchInput(BaseModel):
 # --- Helpers ---
 
 def get_team_stats(stats_dict: dict, team: str) -> dict:
-    return stats_dict.get(team, {"avg_goals": 0, "total_matches": 0, "wins": 0})
+    return stats_dict.get(team, {"avg_goals": 0, "total_matches": 0, "wins": 0, "weighted_win_rate": 0, "last_wc_year": 0})
 
 
 # --- Endpoints ---
@@ -86,8 +86,8 @@ def predict(match: MatchInput):
         home_stat["avg_goals"] - away_stat["avg_goals"],
         home_stat["total_matches"],
         away_stat["total_matches"],
-        home_stat["wins"],
-        away_stat["wins"],
+        home_stat["weighted_win_rate"],
+        away_stat["weighted_win_rate"],
         median_year,
         median_count_teams,
     ]])
@@ -122,26 +122,53 @@ def predict(match: MatchInput):
 
 # --- B3 : GET /api/stats ---
 
+def _normalize(values: list[float]) -> list[float]:
+    min_v, max_v = min(values), max(values)
+    if max_v == min_v:
+        return [0.5] * len(values)
+    return [(v - min_v) / (max_v - min_v) for v in values]
+
+
 @app.get("/api/stats")
 def stats():
     top_teams_wins: list = []
     top_teams_goals: list = []
+    form_scores: list = []
 
     if bundle is not None:
         home_stats_dict = bundle["home_stats"]
 
-        for team, s in home_stats_dict.items():
-            if s["total_matches"] >= MIN_MATCHES:
-                win_pct = (s["wins"] / s["total_matches"]) * 100
-                top_teams_wins.append({"label": team, "value": round(win_pct, 2)})
-                top_teams_goals.append({"label": team, "value": round(s["avg_goals"], 3)})
+        eligible = [
+            (team, s) for team, s in home_stats_dict.items()
+            if s["total_matches"] >= MIN_MATCHES
+        ]
+
+        for team, s in eligible:
+            top_teams_wins.append({"label": team, "value": round(s["weighted_win_rate"] * 100, 2)})
+            top_teams_goals.append({"label": team, "value": round(s["avg_goals"], 3)})
 
         top_teams_wins = sorted(top_teams_wins, key=lambda x: x["value"], reverse=True)[:10]
         top_teams_goals = sorted(top_teams_goals, key=lambda x: x["value"], reverse=True)[:10]
 
+        if eligible:
+            win_rates = [s["weighted_win_rate"] for _, s in eligible]
+            avg_goals_list = [s["avg_goals"] for _, s in eligible]
+            matches_list = [s["total_matches"] for _, s in eligible]
+
+            win_norm = _normalize(win_rates)
+            goals_norm = _normalize(avg_goals_list)
+            exp_norm = _normalize(matches_list)
+
+            for i, (team, _) in enumerate(eligible):
+                score = (0.5 * win_norm[i] + 0.3 * goals_norm[i] + 0.2 * exp_norm[i]) * 100
+                form_scores.append({"label": team, "value": round(score, 1)})
+
+            form_scores = sorted(form_scores, key=lambda x: x["value"], reverse=True)[:15]
+
     return {
         "top_teams_wins": top_teams_wins,
         "top_teams_goals": top_teams_goals,
+        "form_scores": form_scores,
         "metrics": MODEL_METRICS,
     }
 

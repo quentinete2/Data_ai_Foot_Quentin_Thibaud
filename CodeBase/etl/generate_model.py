@@ -1,4 +1,4 @@
-"""Script de génération de model.pkl — extrait du notebook Data_ia_foot.ipynb."""
+"""Script de génération de model.pkl — version avec pondération par récence et normalisation des noms d'équipes."""
 from pathlib import Path
 import warnings
 warnings.filterwarnings('ignore')
@@ -9,6 +9,18 @@ import joblib
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
+
+# Équipes historiques fusionnées avec leur successeur moderne
+TEAM_NAME_MAPPING = {
+    "West Germany": "Germany",
+}
+
+def normalize_team_name(name: str) -> str:
+    return TEAM_NAME_MAPPING.get(name, name)
+
+# Pondération exponentielle : un match de 2008 vaut ~50% d'un match de 2022
+BASE_YEAR = 2022
+RECENCY_HALFLIFE = 14
 
 # 1. Chargement des données
 URL_MATCHES = "https://raw.githubusercontent.com/quentinete2/Data_ai_Foot_Quentin_Thibaud/master/Ressources/Data/matches.csv"
@@ -21,7 +33,17 @@ df_matches = df_matches.merge(
     df_tournaments[['tournament_id', 'year', 'host_country', 'count_teams']],
     on='tournament_id', how='left'
 )
+
+# Normalisation des noms d'équipes (ex : West Germany → Germany)
+df_matches['home_team_name'] = df_matches['home_team_name'].map(normalize_team_name)
+df_matches['away_team_name'] = df_matches['away_team_name'].map(normalize_team_name)
 print(f"✓ {len(df_matches)} matchs chargés")
+renamed = {k: v for k, v in TEAM_NAME_MAPPING.items()}
+for old, new in renamed.items():
+    count = (df_matches['home_team_name'] == new).sum() + (df_matches['away_team_name'] == new).sum()
+    print(f"  → {old} fusionné dans {new} (total {new} : {count} matchs)")
+
+df_matches['match_date'] = pd.to_datetime(df_matches['match_date'], errors='coerce')
 
 # 2. Cible
 conditions = [
@@ -32,23 +54,35 @@ conditions = [
 df_matches['result'] = np.select(conditions, [0, 1, 2], default=np.nan)
 df_matches = df_matches.dropna(subset=['result'])
 
-# 3. Stats par équipe
-def create_team_features(df, team_column, score_column):
+# 3. Stats par équipe avec pondération par récence
+def create_team_features(df, team_column, score_column, win_result):
+    """
+    win_result : 0 = victoire à domicile, 2 = victoire à l'extérieur.
+    weighted_win_rate : part des victoires pondérée par récence (0–1).
+    """
     team_stats = {}
     for team in df[team_column].unique():
-        team_data = df[df[team_column] == team]
+        team_data = df[df[team_column] == team].copy()
+        team_data['weight'] = np.exp((team_data['year'] - BASE_YEAR) / RECENCY_HALFLIFE)
+        total_weight = team_data['weight'].sum()
+
+        wins_mask = team_data['result'] == win_result
         team_stats[team] = {
-            'avg_goals': team_data[score_column].mean(),
+            'avg_goals': float(np.average(team_data[score_column], weights=team_data['weight'])),
             'total_matches': len(team_data),
-            'wins': len(team_data[team_data['result'] == 0]) if 'result' in df.columns else 0,
+            'wins': int(wins_mask.sum()),
+            'weighted_win_rate': float(team_data.loc[wins_mask, 'weight'].sum() / total_weight),
+            'last_wc_year': int(team_data['year'].max()),
         }
     return team_stats
 
 home_stats = create_team_features(
-    df_matches[df_matches['home_team_score'].notna()], 'home_team_name', 'home_team_score'
+    df_matches[df_matches['home_team_score'].notna()],
+    'home_team_name', 'home_team_score', win_result=0
 )
 away_stats = create_team_features(
-    df_matches[df_matches['away_team_score'].notna()], 'away_team_name', 'away_team_score'
+    df_matches[df_matches['away_team_score'].notna()],
+    'away_team_name', 'away_team_score', win_result=2
 )
 print(f"✓ {len(home_stats)} équipes analysées")
 
@@ -68,11 +102,11 @@ df_model['result'] = np.select(conds, [0, 1, 2])
 
 def add_team_features_to_df(row, stats, prefix):
     team = row[f'{prefix}_team_name']
-    s = stats.get(team, {'avg_goals': 0, 'total_matches': 0, 'wins': 0})
+    s = stats.get(team, {'avg_goals': 0, 'total_matches': 0, 'weighted_win_rate': 0})
     return pd.Series({
         f'{prefix}_avg_goals': s['avg_goals'],
         f'{prefix}_total_matches': s['total_matches'],
-        f'{prefix}_wins': s['wins'],
+        f'{prefix}_weighted_win_rate': s['weighted_win_rate'],
     })
 
 home_feats = df_model.apply(lambda r: add_team_features_to_df(r, home_stats, 'home'), axis=1)
@@ -86,9 +120,12 @@ median_year = float(df_model['year'].median())
 median_count_teams = float(df_model['count_teams'].median())
 
 # 5. Entraînement
-features_cols = ['home_avg_goals', 'away_avg_goals', 'goal_diff',
-                 'home_total_matches', 'away_total_matches',
-                 'home_wins', 'away_wins', 'year', 'count_teams']
+features_cols = [
+    'home_avg_goals', 'away_avg_goals', 'goal_diff',
+    'home_total_matches', 'away_total_matches',
+    'home_weighted_win_rate', 'away_weighted_win_rate',
+    'year', 'count_teams'
+]
 X = df_model[features_cols].fillna(0)
 y = df_model['result']
 
@@ -98,6 +135,11 @@ model.fit(X_train, y_train)
 
 accuracy = accuracy_score(y_test, model.predict(X_test))
 print(f"✓ Accuracy : {accuracy:.2%}")
+
+# Vérification : Germany doit avoir des stats fusionnées
+if 'Germany' in home_stats:
+    g = home_stats['Germany']
+    print(f"  → Germany : {g['total_matches']} matchs, weighted_win_rate={g['weighted_win_rate']:.2f}, last_wc={g['last_wc_year']}")
 
 # 6. Export du bundle
 bundle = {
@@ -110,3 +152,4 @@ bundle = {
 output_path = Path(__file__).parents[1] / "backend" / "model.pkl"
 joblib.dump(bundle, output_path)
 print(f"✓ model.pkl exporté → {output_path}")
+print(f"\nMETRICS accuracy pour main.py : {accuracy:.4f}")
