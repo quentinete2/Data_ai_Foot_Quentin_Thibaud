@@ -11,6 +11,17 @@ Format par entrée :
 
 <!-- Les agents ajoutent leurs entrées ici, la plus récente en haut -->
 
+## [Phase2.3] 2026-05-27 — Export du modèle et pinning des versions
+- `CodeBase/backend/model.pkl` : modèle RandomForest (après tuning) exporté via joblib (1.1 MB, pas de git-lfs requis)
+- `CodeBase/backend/requirements.txt` : versions pinnées pour compatibilité model.pkl
+  - fastapi==0.115.0
+  - uvicorn[standard]==0.30.6
+  - pydantic==2.9.2
+  - scikit-learn==1.5.2
+  - joblib==1.4.2
+  - pandas==2.2.3
+- Modèle prêt pour chargement backend (main.py)
+
 ## [Phase2.2] 2026-05-27 — Baseline → Comparaison → Tuning : RandomForest wins (65.20% accuracy)
 - `CodeBase/etl/training_phase2_2.py` : script complet implémentant 10 phases
   - Phase 1: Chargement 1248 matches
