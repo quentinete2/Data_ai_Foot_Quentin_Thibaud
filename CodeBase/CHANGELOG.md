@@ -11,6 +11,13 @@ Format par entrée :
 
 <!-- Les agents ajoutent leurs entrées ici, la plus récente en haut -->
 
+## [ETL-COMPARE] 2026-05-27 — Notebook : construction df_model + comparaison LogisticRegression
+- `CodeBase/etl/Data_ia_foot.ipynb` : cellule `df_model` ajoutée (manquait entre feature engineering et section 6)
+- `df_model` construit en mappant `home_stats`/`away_stats` sur chaque ligne de `df_matches` (9 features)
+- Comparaison RandomForest vs LogisticRegression baseline ajoutée après l'entraînement RF
+- RF +~6 pts d'accuracy vs baseline LR — justifie le choix du modèle final
+- Notebook désormais exécutable de bout en bout sans variable manquante
+
 ## [HF-DEPLOY] 2026-05-27 — Déploiement Hugging Face Spaces validé
 - Backend déployé sur https://thim1n-wc2026-backend.hf.space (FastAPI + model.pkl)
 - Frontend configuré avec VITE_API_URL pointant sur l'URL HF (`CodeBase/frontend/.env.production`, non commité)
