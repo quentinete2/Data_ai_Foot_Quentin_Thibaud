@@ -1,48 +1,137 @@
-# Template projet B3 — Dashboard React + API FastAPI
+# Dashboard FIFA World Cup 2026 — Prédiction ML
 
-Squelette à compléter **avec Claude Code**. Stack alignée sur la stack Pando (version cours).
+Application full-stack de prédiction de résultats de matchs pour la Coupe du Monde 2026,
+entraînée sur l'historique des Coupes du Monde (1930–2022).
 
-- **frontend/** : React 18 + Vite + **TypeScript** · **TanStack React Query** (data) · **Tailwind CSS** (+ `cn()` shadcn-ready) · **lucide-react** (icônes) · **Recharts** (graphes).
-- **backend/** : FastAPI (Python) + joblib (charge `model.pkl`).
-- *En prod chez Pando c'est Next.js ; ici une SPA servie par 1 FastAPI → Vite.*
+🔗 **Demo live** : https://thim1n-wc2026-backend.hf.space
 
-## Démarrer
+---
+
+## Architecture
+
+### Pipeline de données
+
+```mermaid
+graph LR
+    CSV["📄 matches.csv\ntournaments.csv\n1 248 matchs"] --> ETL["🔬 Notebook ETL\nfeature engineering\nrecency weighting"]
+    ETL --> PKL["📦 model.pkl\nRandomForest\n65.2 % accuracy"]
+    PKL --> API["⚙️ FastAPI\n/api/predict\n/api/stats"]
+    API --> FE["🖥️ React SPA\nRecharts + React Query"]
+    FE --> USER["👤 Utilisateur"]
+```
+
+### Séquence de prédiction
+
+```mermaid
+sequenceDiagram
+    participant U as Utilisateur
+    participant F as Frontend (React)
+    participant B as Backend (FastAPI)
+    participant M as model.pkl
+
+    U->>F: Saisit ex. "France" vs "Brazil"
+    F->>B: POST /api/predict {home_team, away_team}
+    B->>M: predict(features[9])
+    M-->>B: classe (0/1/2) + probas
+    B-->>F: {prediction, confidence, probabilities, home_stats, away_stats}
+    F-->>U: "Victoire France — 48.3 %"
+```
+
+---
+
+## Stack
+
+| Couche | Technologie |
+|--------|-------------|
+| Frontend | React 18 + Vite + TypeScript + TanStack React Query + Tailwind CSS + Recharts |
+| Backend | FastAPI + joblib + Pydantic v2 |
+| ML | scikit-learn RandomForestClassifier |
+| Déploiement | Hugging Face Spaces (Docker) |
+
+---
+
+## Modèle ML
+
+- **Données** : 1 248 matchs historiques (Coupes du Monde 1930–2022), fusionnées avec `tournaments.csv`
+- **Tâche** : classification 3 classes — `0` victoire domicile · `1` nul · `2` victoire extérieur
+- **9 features** par match :
+
+| Feature | Description |
+|---------|-------------|
+| `home_avg_goals` | Moyenne de buts à domicile (pondérée récence) |
+| `away_avg_goals` | Moyenne de buts à l'extérieur (pondérée récence) |
+| `goal_diff` | Différence de moyennes de buts |
+| `home_total_matches` | Nombre de matchs joués à domicile |
+| `away_total_matches` | Nombre de matchs joués à l'extérieur |
+| `home_weighted_win_rate` | Taux de victoires domicile (pondéré récence) |
+| `away_weighted_win_rate` | Taux de victoires extérieur (pondéré récence) |
+| `year` | Année médiane des tournois |
+| `count_teams` | Nombre d'équipes médian par tournoi |
+
+- **Pondération récence** : decay exponentiel (half-life 14 ans) — un match 2022 vaut ~2× un match 2008
+- **Split** : 80 % train / 20 % test (`random_state=42`)
+- **Comparaison modèles** :
+
+| Modèle | Accuracy test set |
+|--------|------------------|
+| Régression Logistique (baseline) | ~58.8 % |
+| **Random Forest** (modèle retenu) | **65.2 %** |
+
+---
+
+## Démarrage local
 
 ### Backend (terminal 1)
+
 ```bash
-cd backend
-python -m venv .venv && source .venv/bin/activate
+cd CodeBase/backend
+python -m venv .venv
+# Windows :
+.venv\Scripts\activate
+# macOS/Linux :
+source .venv/bin/activate
+
 pip install -r requirements.txt
-# placez votre model.pkl ici (exporté du notebook J2 : joblib.dump(pipeline, "model.pkl"))
-python main.py            # API sur http://localhost:8000  (test : /api/health)
+python main.py        # API sur http://localhost:8000
+# Vérif : GET http://localhost:8000/api/health → {"status":"ok","model_loaded":true}
 ```
 
 ### Frontend (terminal 2)
+
 ```bash
-cd frontend
+cd CodeBase/frontend
 npm install
-npm run dev               # app sur http://localhost:5173
+npm run dev           # App sur http://localhost:5173
+npm run typecheck     # Vérification TypeScript (0 erreurs)
 ```
 
-## Ce qu'il reste à faire (cherchez les `TODO`)
-- **backend** : définir le modèle Pydantic `Features`, compléter `/api/predict` et `/api/stats`.
-- **frontend** : générer les champs du formulaire (`PredictionForm.tsx`), activer la requête stats (`App.tsx`), ajouter les graphes Recharts.
+### Docker (optionnel)
 
-## Prompts Claude Code pour démarrer
-- « Lis `backend/main.py` et `frontend/src/`, explique-moi la structure et la stack. »
-- « Dans `backend/main.py`, définis le Pydantic `Features` avec `<mes features>` et complète `/api/predict`. »
-- « Dans `frontend/src/PredictionForm.tsx`, génère un champ contrôlé par feature, soumets via la mutation React Query, affiche la prédiction. »
-- (graphes : voir le **brief d'autonomie 15h-16h**)
+```bash
+cd CodeBase
+docker-compose up --build   # backend :8000 + frontend Nginx :80
+```
 
-## Conventions (voir CLAUDE.md)
-- Données serveur → **React Query** ; state local → `useState` ; styles → **Tailwind**.
-- UI : `npx shadcn@latest add <composant>` au besoin, ne pas réinventer les primitives.
+---
 
-## Déploiement (J4)
-`npm run build` dans `frontend/` → décommentez le bloc `StaticFiles` dans `backend/main.py` → **une seule App Service**.
+## Structure du repo
 
-## En cas de blocage
-- *CORS error* → `CORSMiddleware` (présent) autorise `localhost:5173`. Vérifiez les ports.
-- *Graphe vide* → manque `<ResponsiveContainer>` ou `/api/stats` renvoie vide (onglet Réseau).
-- *Modèle plante* → ordre/types des features ≠ entraînement J2.
-- Ça casse → `git restore .` (commitez souvent !).
+```
+BigData/
+├── CodeBase/
+│   ├── backend/        # FastAPI · main.py · model.pkl · requirements.txt · Dockerfile
+│   ├── frontend/       # React 18 + Vite + TypeScript · src/ · Dockerfile
+│   └── etl/            # Jupyter notebook (ETL + entraînement + export model.pkl)
+└── Ressources/
+    └── Data/           # matches.csv · tournaments.csv (données brutes)
+```
+
+---
+
+## Endpoints API
+
+| Méthode | Route | Description |
+|---------|-------|-------------|
+| `GET` | `/api/health` | Statut du service et chargement du modèle |
+| `POST` | `/api/predict` | Prédiction `{home_team, away_team}` → résultat + probas + stats |
+| `GET` | `/api/stats` | Top équipes victoires/buts + accuracy du modèle |

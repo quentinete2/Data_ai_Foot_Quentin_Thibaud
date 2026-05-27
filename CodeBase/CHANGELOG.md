@@ -11,6 +11,13 @@ Format par entrée :
 
 <!-- Les agents ajoutent leurs entrées ici, la plus récente en haut -->
 
+## [README] 2026-05-27 — Réécriture README projet
+- `CodeBase/README.md` : remplace le template "Squelette à compléter" par README projet complet
+- Diagramme mermaid pipeline data (CSV → ETL → model.pkl → FastAPI → React → Utilisateur)
+- Diagramme mermaid séquence de prédiction (UML)
+- Tableau comparaison modèles ML, tableau des 9 features, tableau endpoints API
+- URL HF Spaces, instructions démarrage local, structure du repo
+
 ## [ETL-COMPARE] 2026-05-27 — Notebook : construction df_model + comparaison LogisticRegression
 - `CodeBase/etl/Data_ia_foot.ipynb` : cellule `df_model` ajoutée (manquait entre feature engineering et section 6)
 - `df_model` construit en mappant `home_stats`/`away_stats` sur chaque ligne de `df_matches` (9 features)
