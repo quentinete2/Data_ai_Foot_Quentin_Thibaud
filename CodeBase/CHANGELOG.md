@@ -11,6 +11,12 @@ Format par entrée :
 
 <!-- Les agents ajoutent leurs entrées ici, la plus récente en haut -->
 
+## [HF-DEPLOY] 2026-05-27 — Déploiement Hugging Face Spaces validé
+- Backend déployé sur https://thim1n-wc2026-backend.hf.space (FastAPI + model.pkl)
+- Frontend configuré avec VITE_API_URL pointant sur l'URL HF (`CodeBase/frontend/.env.production`, non commité)
+- `/api/health` répond `{"status":"ok","model_loaded":true}` en production
+- `/api/predict` et `/api/stats` opérationnels depuis HF Spaces
+
 ## [Phase2.4] 2026-05-27 — API FastAPI minimale : /api/health + /api/predict + /api/stats ✅
 - `CodeBase/etl/export_bundle.py` : script pour créer le bundle complet (modèle + stats d'équipes)
   - Charge modèle tuned de training_phase2_2.py
